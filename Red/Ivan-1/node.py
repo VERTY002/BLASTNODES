@@ -2,14 +2,11 @@ import socket
 import threading
 import time
 import os
-import requests
 
 # Configuración del nodo a través de variables de entorno
 NODE_NAME = os.getenv("NODE_NAME", "Node")  # Nombre identificador del nodo
 NODE_PORT = int(os.getenv("NODE_PORT", 9000))  # Puerto en el que escucha este nodo
 PEER_NODES = os.getenv("PEER_NODES", "")  # Lista de peers con formato: "node2:9001,node3:9002"
-DASHBOARD_HOST = os.getenv("DASHBOARD_HOST", "dashboard")  # Dirección del visor (dashboard)
-DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", 5000))  # Puerto del visor
 
 peer_connections = []  # Lista de sockets conectados a peers
 
@@ -66,24 +63,9 @@ def send_heartbeat():
                 print(f"[{NODE_NAME}] Failed to send ping: {e}")
         time.sleep(5)
 
-def report_status():
-    """Envía periódicamente el estado del nodo al dashboard para su visualización."""
-    while True:
-        try:
-            requests.post(f"http://{DASHBOARD_HOST}:{DASHBOARD_PORT}/report", json={
-                "name": NODE_NAME,
-                "port": NODE_PORT,
-                "peers": PEER_NODES.split(",") if PEER_NODES else [],
-                "timestamp": time.time()
-            })
-        except Exception as e:
-            print(f"[{NODE_NAME}] Failed to report status: {e}")
-        time.sleep(5)
-
 if __name__ == "__main__":
-    # Inicia servidor TCP y reporte al dashboard en hilos separados
+    # Inicia el servidor TCP en un hilo independiente
     threading.Thread(target=start_server, daemon=True).start()
-    threading.Thread(target=report_status, daemon=True).start()
     
     time.sleep(2)  # Pequeño retardo para asegurar que el servidor esté listo
 

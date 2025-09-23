@@ -4,6 +4,4 @@ WORKDIR /app
 
 COPY node.py .
 
-RUN pip install requests
-
 CMD ["python", "node.py"]
