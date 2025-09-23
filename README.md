@@ -1,2 +1,2 @@
 # BLASTNODES
-PAEST_project_NODE_BLAST_ON_RADIUS_ITNOW
+Blast Radius Based on Nodes (ITNow)

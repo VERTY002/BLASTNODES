@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  node1:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    container_name: node1
+    environment:
+      - NODE_NAME=node1
+      - NODE_PORT=9000
+      - PEER_NODES=node2:9001,node3:9002
+    networks:
+      custom_net:
+        ipv4_address: 172.20.0.2
+
+  node2:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    container_name: node2
+    environment:
+      - NODE_NAME=node2
+      - NODE_PORT=9001
+      - PEER_NODES=node1:9000,node3:9002
+    networks:
+      custom_net:
+        ipv4_address: 172.20.0.3
+
+  node3:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    container_name: node3
+    environment:
+      - NODE_NAME=node3
+      - NODE_PORT=9002
+      - PEER_NODES=node1:9000,node2:9001
+    networks:
+      custom_net:
+        ipv4_address: 172.20.0.4
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: dashboard
+    ports:
+      - "5000:5000"
+    networks:
+      custom_net:
+        ipv4_address: 172.20.0.100
+
+networks:
+  custom_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
