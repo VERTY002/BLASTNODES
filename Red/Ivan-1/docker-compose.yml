@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   node1:
     build:
       context: .
-      dockerfile: Dockerfile.node
+      dockerfile: Dockerfile
     container_name: node1
     environment:
       - NODE_NAME=node1
@@ -17,7 +15,7 @@ services:
   node2:
     build:
       context: .
-      dockerfile: Dockerfile.node
+      dockerfile: Dockerfile
     container_name: node2
     environment:
       - NODE_NAME=node2
@@ -30,7 +28,7 @@ services:
   node3:
     build:
       context: .
-      dockerfile: Dockerfile.node
+      dockerfile: Dockerfile
     container_name: node3
     environment:
       - NODE_NAME=node3
@@ -39,17 +37,6 @@ services:
     networks:
       custom_net:
         ipv4_address: 172.20.0.4
-
-  dashboard:
-    build:
-      context: .
-      dockerfile: Dockerfile.dashboard
-    container_name: dashboard
-    ports:
-      - "5000:5000"
-    networks:
-      custom_net:
-        ipv4_address: 172.20.0.100
 
 networks:
   custom_net:
