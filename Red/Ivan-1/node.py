@@ -6,7 +6,8 @@ import os
 # Configuración del nodo a través de variables de entorno
 NODE_NAME = os.getenv("NODE_NAME", "Node")  # Nombre identificador del nodo
 NODE_PORT = int(os.getenv("NODE_PORT", 9000))  # Puerto en el que escucha este nodo
-PEER_NODES = os.getenv("PEER_NODES", "")  # Lista de peers con formato: "node2:9001,node3:9002"
+PEER_NODES = os.getenv("PEER_NODES", "")  # Lista de peers p.ej. "node2:9001,node3:9002"
+DELAY = int(os.getenv("DELAY", 5))  # Tiempo entre paquetes enviados
 
 peer_connections = []  # Lista de sockets conectados a peers
 
@@ -18,9 +19,27 @@ def handle_client(conn, addr):
             data = conn.recv(1024)
             if not data:
                 break  # El cliente cerró la conexión
-            print(f"[{NODE_NAME}] Received from {addr}: {data.decode()}")
+            message = data.decode()
+            print(f"[{NODE_NAME}] Received from {addr}: {message}")
+
+            # Responder con un 'pong' o confirmación
+            response = f"Reply from {NODE_NAME} to {addr[0]}:{addr[1]}"
+            conn.sendall(response.encode())
     except Exception as e:
         print(f"[{NODE_NAME}] Error: {e}")
+    finally:
+        conn.close()
+
+def listen_to_peer(conn):
+    """Escucha lo que el peer envía en una conexión saliente."""
+    try:
+        while True:
+            data = conn.recv(1024)
+            if not data:
+                break
+            print(f"[{NODE_NAME}] Received from peer: {data.decode()}")
+    except Exception as e:
+        print(f"[{NODE_NAME}] Error receiving from peer: {e}")
     finally:
         conn.close()
 
@@ -34,7 +53,7 @@ def start_server():
     while True:
         conn, addr = server.accept()
         client_thread = threading.Thread(target=handle_client, args=(conn, addr), daemon=True)
-        client_thread.start()  # Cada conexión entrante se maneja en un hilo independiente
+        client_thread.start()
 
 def connect_to_peers():
     """Establece conexiones salientes con los nodos definidos en PEER_NODES."""
@@ -49,6 +68,9 @@ def connect_to_peers():
             s.connect((host, int(port)))
             peer_connections.append(s)
             print(f"[{NODE_NAME}] Connected to peer {host}:{port}")
+
+            # Escuchar mensajes recibidos desde este peer
+            threading.Thread(target=listen_to_peer, args=(s,), daemon=True).start()
         except Exception as e:
             print(f"[{NODE_NAME}] Could not connect to {host}:{port} - {e}")
 
@@ -61,14 +83,12 @@ def send_heartbeat():
                 conn.sendall(msg.encode())
             except Exception as e:
                 print(f"[{NODE_NAME}] Failed to send ping: {e}")
-        time.sleep(5)
+        time.sleep(DELAY)
 
 if __name__ == "__main__":
-    # Inicia el servidor TCP en un hilo independiente
     threading.Thread(target=start_server, daemon=True).start()
-    
-    time.sleep(2)  # Pequeño retardo para asegurar que el servidor esté listo
 
-    # Conecta a otros peers y comienza a enviar pings periódicos
+    time.sleep(2)  # Espera para asegurar que el servidor está listo
+
     connect_to_peers()
     send_heartbeat()

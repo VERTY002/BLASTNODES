@@ -1,42 +1,31 @@
 services:
-  node1:
+  server:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: node1
+    container_name: server
     environment:
-      - NODE_NAME=node1
+      - NODE_NAME=server
       - NODE_PORT=9000
       - PEER_NODES=node2:9001,node3:9002
+      - DELAY=10
     networks:
       custom_net:
         ipv4_address: 172.20.0.2
 
-  node2:
+  client:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: node2
+    container_name: client
     environment:
-      - NODE_NAME=node2
+      - NODE_NAME=client
       - NODE_PORT=9001
-      - PEER_NODES=node1:9000,node3:9002
+      - PEER_NODES=node1:9000
+      - DELAY=5
     networks:
       custom_net:
         ipv4_address: 172.20.0.3
-
-  node3:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: node3
-    environment:
-      - NODE_NAME=node3
-      - NODE_PORT=9002
-      - PEER_NODES=node1:9000,node2:9001
-    networks:
-      custom_net:
-        ipv4_address: 172.20.0.4
 
 networks:
   custom_net:
