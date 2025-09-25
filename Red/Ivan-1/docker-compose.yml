@@ -7,7 +7,7 @@ services:
     environment:
       - NODE_NAME=server
       - NODE_PORT=9000
-      - PEER_NODES=node2:9001,node3:9002
+      - PEER_NODES=client:9001
       - DELAY=10
     networks:
       custom_net:
@@ -21,7 +21,7 @@ services:
     environment:
       - NODE_NAME=client
       - NODE_PORT=9001
-      - PEER_NODES=node1:9000
+      - PEER_NODES=server:9000
       - DELAY=5
     networks:
       custom_net:
