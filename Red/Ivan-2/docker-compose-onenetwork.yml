@@ -176,7 +176,7 @@ services:
 # Red (aqui solo una)
 networks:
   blast_net:
-    driver: bridge
+    external: true # asegurarse de que ha una red creada llamad blasat_net con el comano docker network ls 
 
 volumes: 
   db01_data:
