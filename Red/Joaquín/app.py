@@ -34,10 +34,11 @@ def handle_connection(conn, addr):
                 dest = msg["destination"]
                 payload = msg["payload"]
                 if dest == socket.gethostname():
-                    print(f"Recibido mensaje para mí: {payload}", flush=True)
+                    print(f"{socket.gethostname()} recibió mensaje para mí: {payload}", flush=True)
                 else:
-                    # Reenviar a todos los peers menos al que nos lo envió
-                    forward_message(msg, exclude_host=addr[0])
+                    # reenviar a todos los peers menos el que lo envió
+                    sender_hostname = msg.get("source")  # mejor usar el hostname de quien envió
+                    forward_message(msg, exclude_host=sender_hostname)
             except Exception as e:
                 print("Error procesando mensaje:", e, flush=True)
 
@@ -49,13 +50,19 @@ def forward_message(msg, exclude_host=None):
                     s.settimeout(1)
                     s.connect((peer["name"], peer["port"]))
                     s.sendall(json.dumps(msg).encode())
-                    print(f"Reenvio el mensaje porque es para {msg['destination']}, y yo soy {socket.gethostname()}",flush=True)
-            except Exception:
-                pass
+                print(f"{socket.gethostname()} reenvía mensaje a {peer['name']} para destino {msg['destination']}", flush=True)
+            except Exception as e:
+                print(f"{socket.gethostname()} fallo al reenviar a {peer['name']}: {e}", flush=True)
+
 
 # Cliente que envía mensajes a destinos finales
 def client():
     while True:
+        # Si no hay destinos, no hace nada
+        if not DESTINOS or DESTINOS == [""]:
+            time.sleep(1)
+            continue
+
         for dest in DESTINOS:
             msg = {
                 "source": socket.gethostname(),
