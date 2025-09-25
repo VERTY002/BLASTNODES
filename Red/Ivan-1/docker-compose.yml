@@ -1,35 +1,37 @@
 services:
   server:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: ./node
     container_name: server
-    environment:
-      - NODE_NAME=server
-      - NODE_PORT=9000
-      - PEER_NODES=client:9001
-      - DELAY=10
     networks:
-      custom_net:
-        ipv4_address: 172.20.0.2
-
-  client:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: client
-    environment:
-      - NODE_NAME=client
-      - NODE_PORT=9001
-      - PEER_NODES=server:9000
-      - DELAY=5
+    - net_client-1_server
+    volumes:
+    - ./configs/server.json:/app/config.json
+  client-1:
+    build: ./node
+    container_name: client-1
     networks:
-      custom_net:
-        ipv4_address: 172.20.0.3
-
+    - net_client-1_client-2
+    - net_client-1_server
+    volumes:
+    - ./configs/client-1.json:/app/config.json
+  client-2:
+    build: ./node
+    container_name: client-2
+    networks:
+    - net_client-1_client-2
+    volumes:
+    - ./configs/client-2.json:/app/config.json
+  client-3:
+    build: ./node
+    container_name: client-3
+    networks:
+    - net_client-2_client-3
+    volumes:
+    - ./configs/client-3.json:/app/config.json
 networks:
-  custom_net:
+  net_client-1_server:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+  net_client-1_client-2:
+    driver: bridge
+  net_client-2_client-3:
+    driver: bridge
