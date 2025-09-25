@@ -56,23 +56,31 @@ def start_server():
         client_thread.start()
 
 def connect_to_peers():
-    """Establece conexiones salientes con los nodos definidos en PEER_NODES."""
+    """Establece conexiones salientes con los nodos definidos en PEER_NODES, con reintentos."""
     global peer_connections
     peers = PEER_NODES.split(",")
-    for peer in peers:
-        if not peer:
-            continue
-        host, port = peer.split(":")
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((host, int(port)))
-            peer_connections.append(s)
-            print(f"[{NODE_NAME}] Connected to peer {host}:{port}")
+    
+    while True:
+        remaining_peers = []
+        for peer in peers:
+            if not peer:
+                continue
+            host, port = peer.split(":")
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.connect((host, int(port)))
+                peer_connections.append(s)
+                print(f"[{NODE_NAME}] Connected to peer {host}:{port}")
+                threading.Thread(target=listen_to_peer, args=(s,), daemon=True).start()
+            except Exception as e:
+                print(f"[{NODE_NAME}] Could not connect to {host}:{port} - {e}")
+                remaining_peers.append(peer)
 
-            # Escuchar mensajes recibidos desde este peer
-            threading.Thread(target=listen_to_peer, args=(s,), daemon=True).start()
-        except Exception as e:
-            print(f"[{NODE_NAME}] Could not connect to {host}:{port} - {e}")
+        if not remaining_peers:
+            break  # todos conectados
+        print(f"[{NODE_NAME}] Retrying connection to remaining peers in 5s...")
+        peers = remaining_peers
+        time.sleep(5)
 
 def send_heartbeat():
     """Envía mensajes de ping periódicos a todos los peers conectados."""
