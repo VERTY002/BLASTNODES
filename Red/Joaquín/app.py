@@ -50,12 +50,12 @@ def forward_message(msg, exclude_host=None):
                     s.settimeout(1)
                     s.connect((peer["name"], peer["port"]))
                     s.sendall(json.dumps(msg).encode())
-                print(f"{socket.gethostname()} reenvía mensaje a {peer['name']} para destino {msg['destination']}", flush=True)
+                print(f" {socket.gethostname()} reenvía mensaje a {peer['name']} para destino {msg['destination']}", flush=True)
             except Exception as e:
                 print(f"{socket.gethostname()} fallo al reenviar a {peer['name']}: {e}", flush=True)
 
 
-# Cliente que envía mensajes a destinos finales
+# Cliente que genera mensajes cada 5s a destinos finales
 def client():
     while True:
         # Si no hay destinos, no hace nada
