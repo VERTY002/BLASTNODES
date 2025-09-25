@@ -49,7 +49,7 @@ def forward_message(msg, exclude_host=None):
                     s.settimeout(1)
                     s.connect((peer["name"], peer["port"]))
                     s.sendall(json.dumps(msg).encode())
-                    print(f"Reenvio el mensaje porque es para {dest}, y yo soy {socket.gethostname()}",flush=True)
+                    print(f"Reenvio el mensaje porque es para {msg['destination']}, y yo soy {socket.gethostname()}",flush=True)
             except Exception:
                 pass
 
