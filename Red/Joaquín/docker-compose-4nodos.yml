@@ -1,14 +1,14 @@
 version: "3.9"
 services:
   node1:
-    image: app_pae
+    image: app_pae  #Este es el nombre con el que he construido la imagen con el Dockerfile, poned el que querais#
     hostname: node1
     environment:
-      - PEERS=node2:5000,node3:5000
-      - PORT=5000
-      - DESTINOS=node4
+      - PEERS=node2:5000,node3:5000 #Conexiones "físicas" #
+      - PORT=5000 #Puerto en el que su servidor escucha #
+      - DESTINOS=node4 #Generar tráfico hacia destino X#
     volumes: 
-      - /home/joaquin/Documents/PAE/Prueba Docker/app/app.py:/app/app.py # !!!!!!!!!!!!!!!!!!  Aqui que cada uno ponga su ruta al archivo !!!!!!!!!!!!!!!!
+      - /home/joaquin/Documents/PAE/Prueba Docker/app/app.py:/app/app.py # !!!!!!!!!!!!!!!!!!  Aqui que cada uno ponga su ruta al archivo o borre la linea!!!!!!!!!!!!!!!!
 
   node2:
     image: app_pae
