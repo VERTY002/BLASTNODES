@@ -1,0 +1,52 @@
+version: "3.9"
+services:
+  node1:
+    image: app_pae
+    hostname: node1
+    environment:
+      - PORT=5000 #Puerto en el que escucha el servidor
+      - PEERS=node2:5000,node3:5000 #Conexiones directas "físicas"
+      - DESTINOS=node4 #Nodos hacia los que genera trafico
+      - ROUTES=node4:node2:5000 #tabla de enrutamiento estatica, Formato es el siguiente- NodoFinal:Nodoalqueenviar:puerto
+      
+    volumes:
+      - ./app.py:/app/app.py #El Volumen lo podeis dejar o quitar, es para que se actualice el contenedor con los cambios
+      
+  node2:
+    image: app_pae
+    hostname: node2
+    environment:
+      - PORT=5000
+      - PEERS=node1:5000,node4:5000
+      - DESTINOS=
+      - ROUTES=node3:node4:5000
+    volumes:
+      - ./app.py:/app/app.py
+  
+
+  node3:
+    image: app_pae
+    hostname: node3
+    environment:
+      - PORT=5000
+      - PEERS=node1:5000,node4:5000
+      - DESTINOS=
+      - ROUTES=node2:node4:5000
+    volumes:
+      - ./app.py:/app/app.py
+  
+
+  node4:
+    image: app_pae
+    hostname: node4
+    environment:
+      - PORT=5000
+      - PEERS=node2:5000,node3:5000
+      - DESTINOS=
+      - ROUTES=node1:node2:5000
+    volumes:
+      - ./app.py:/app/app.py
+  
+
+
+
