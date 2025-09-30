@@ -3,35 +3,44 @@ import threading
 import time
 import os
 
-# Configuración del nodo a través de variables de entorno
-NODE_NAME = os.getenv("NODE_NAME", "Node")  # Nombre identificador del nodo
-NODE_PORT = int(os.getenv("NODE_PORT", 9000))  # Puerto en el que escucha este nodo
-PEER_NODES = os.getenv("PEER_NODES", "")  # Lista de peers p.ej. "node2:9001,node3:9002"
-DELAY = int(os.getenv("DELAY", 5))  # Tiempo entre paquetes enviados
+NODE_NAME = os.getenv("NODE_NAME", "Node")
+NODE_PORT = int(os.getenv("NODE_PORT", 9000))
+PEER_NODES = os.getenv("PEER_NODES", "")
+DELAY = int(os.getenv("DELAY", 5))
+NODE_IS_RELAY = os.getenv("NODE_IS_RELAY", "false").lower() == "true"
 
-peer_connections = []  # Lista de sockets conectados a peers
+peer_connections = []
 
 def handle_client(conn, addr):
-    """Maneja una conexión entrante desde otro nodo."""
+    """ Maneja conexión entrante (desde peer o cliente relay) """
     print(f"[{NODE_NAME}] Connection from {addr}")
     try:
         while True:
             data = conn.recv(1024)
             if not data:
-                break  # El cliente cerró la conexión
+                break
             message = data.decode()
             print(f"[{NODE_NAME}] Received from {addr}: {message}")
 
-            # Responder con un 'pong' o confirmación
-            response = f"Reply from {NODE_NAME} to {addr[0]}:{addr[1]}"
-            conn.sendall(response.encode())
+            if NODE_IS_RELAY:
+                # Relay: reenvía al servidor
+                for peer in peer_connections:
+                    try:
+                        relay_msg = f"[RELAYED by {NODE_NAME}] {message}"
+                        peer.sendall(relay_msg.encode())
+                    except:
+                        pass
+            else:
+                # Nodo normal: responde
+                response = f"Reply from {NODE_NAME} to {addr[0]}:{addr[1]}"
+                conn.sendall(response.encode())
     except Exception as e:
         print(f"[{NODE_NAME}] Error: {e}")
     finally:
         conn.close()
 
 def listen_to_peer(conn):
-    """Escucha lo que el peer envía en una conexión saliente."""
+    """ Escucha lo que envían los peers salientes """
     try:
         while True:
             data = conn.recv(1024)
@@ -44,7 +53,6 @@ def listen_to_peer(conn):
         conn.close()
 
 def start_server():
-    """Inicia el servidor TCP que acepta conexiones entrantes de otros nodos."""
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(("0.0.0.0", NODE_PORT))
     server.listen()
@@ -52,14 +60,11 @@ def start_server():
 
     while True:
         conn, addr = server.accept()
-        client_thread = threading.Thread(target=handle_client, args=(conn, addr), daemon=True)
-        client_thread.start()
+        threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
 
 def connect_to_peers():
-    """Establece conexiones salientes con los nodos definidos en PEER_NODES, con reintentos."""
     global peer_connections
     peers = PEER_NODES.split(",")
-    
     while True:
         remaining_peers = []
         for peer in peers:
@@ -75,15 +80,12 @@ def connect_to_peers():
             except Exception as e:
                 print(f"[{NODE_NAME}] Could not connect to {host}:{port} - {e}")
                 remaining_peers.append(peer)
-
         if not remaining_peers:
-            break  # todos conectados
-        print(f"[{NODE_NAME}] Retrying connection to remaining peers in 5s...")
-        peers = remaining_peers
+            break
         time.sleep(5)
+        peers = remaining_peers
 
 def send_heartbeat():
-    """Envía mensajes de ping periódicos a todos los peers conectados."""
     while True:
         for conn in peer_connections:
             try:
@@ -95,8 +97,6 @@ def send_heartbeat():
 
 if __name__ == "__main__":
     threading.Thread(target=start_server, daemon=True).start()
-
-    time.sleep(2)  # Espera para asegurar que el servidor está listo
-
+    time.sleep(2)
     connect_to_peers()
     send_heartbeat()

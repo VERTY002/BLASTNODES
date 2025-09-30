@@ -1,0 +1,6 @@
+{
+  "node": "client-1",
+  "logical_connections": [
+    "server"
+  ]
+}

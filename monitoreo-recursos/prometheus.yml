@@ -1,0 +1,21 @@
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+
+scrape_configs: # DEFINIMOS LOS ENDPOINTS O SERVICIOS QUE VAMOS A MONITOREAR
+  - job_name: 'prometheus'  # LE PONEMOS NOMBRE AL JOB 
+    static_configs:
+    - targets: ['prometheus:9090'] # LE DECIMOS LA RUTA DONDE ESTA EL SERVICIO (HOST:PUERTO)
+    
+  - job_name: 'cadvisor'
+    static_configs:
+    - targets: ['cadvisor:8080']
+
+  - job_name: 'node_exporter'
+    static_configs:
+    - targets: ['node_exporter:9100']   
+
+  - job_name: 'nodos'
+    static_configs:
+      - targets: ['nodo1:8000', 'nodo2:8001', 'nodo3:8002']
+

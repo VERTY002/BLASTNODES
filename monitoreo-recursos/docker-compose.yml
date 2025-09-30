@@ -1,0 +1,103 @@
+version: "3.7"
+
+volumes: #ESTO LO PONEMOS POR SI BORRAMOS LOS CONTENEDORES NO PERDER LA INFO QUE HAY DENTRO DE ELLOS
+  grafana-data:   #GUARDA LA CONFIGURACION DE GRAFANA 
+  prometheus-data:    #GUARDA LAS METRICAS QUE PROMETEUS RECOLECTA
+
+services:
+  grafana: # PARA VISUALIZAR LAS METRICAS DE PROMETHEUS CON GRAFANA
+    image: grafana/grafana:8.0.6 #LE DICE A DOCKER QUE IMAGEN DE DOCKER VAMOS A USAR
+    container_name: grafana # NOMBRE DEL CONTENEDOR QUE HEMOS CREADO, SINO LE PONDRIA UN NOMBRE ALEATORIO
+    restart: unless-stopped # SI EL CONTENEDOR SE CAE, QUE LO REINICIE
+    volumes:
+    - grafana-data:/var/lib/grafana #MONTA EL VOLUMEN CREADO ANTES EN LA RUTA DONDE GRAFANA GUARDA SU INFO
+    ports:
+    - 3000:3000 #MAPEA EL PUERTO 3000 DEL CONTENEDOR AL PUERTO 3000 DE LA MAQUINA HOST
+
+  prometheus:
+    image: prom/prometheus:v2.28.1 #LE DICE A DOCKER QUE IMAGEN DE DOCKER VAMOS A USAR
+    container_name: prometheus # NOMBRE DEL CONTENEDOR QUE HEMOS CREADO, SINO LE PONDRIA UN NOMBRE ALEATORIO
+    restart: unless-stopped # SI EL CONTENEDOR SE CAE, QUE LO REINICIE
+    volumes: 
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml #ENDPOINT DONDE ESTA EL ARCHIVO DE CONFIGURACION DE PROMETHEUS
+    - prometheus-data:/prometheus #VOLUMEN DONDE PROMETHEUS VA A GUARDAR LAS METRICAS QUE RECOLECTA
+    ports:
+    - 9090:9090 #MAPEA EL PUERTO 9090 DEL CONTENEDOR AL PUERTO 9090 DE LA MAQUINA HOST
+    command: #LE PASAMOS LOS PARAMETROS DE CONFIGURACION A PROMETHEUS
+    - '--config.file=/etc/prometheus/prometheus.yml'
+    - '--storage.tsdb.path=/prometheus'
+    - '--storage.tsdb.retention.time=1y'
+    - '--web.enable-lifecycle'
+
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node_exporter
+    restart: unless-stopped
+    ports:
+    - 9100:9100
+    ###### linux
+    # command:
+    # - '--path.rootfs=/host'
+    # pid: host
+    # volumes:
+    # - '/:/host:ro,rslave'
+    ###### windows
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    command: 
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+        
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    expose:
+    - 8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+
+  nodo1:
+    build: .
+    container_name: nodo1
+    restart: unless-stopped
+    environment:
+      - NODE_NAME=nodo1
+      - PORT=5000
+      - METRICS_PORT=8000
+      - PEERS=nodo2:5001,nodo3:5002
+    ports:
+      - "5000:5000"
+      - "8000:8000"
+
+  nodo2:
+    build: .
+    container_name: nodo2
+    restart: unless-stopped
+    environment:
+      - NODE_NAME=nodo2
+      - PORT=5001
+      - METRICS_PORT=8001
+      - PEERS=nodo1:5000,nodo3:5002
+    ports:
+      - "5001:5001"
+      - "8001:8001"
+
+  nodo3:
+    build: .
+    container_name: nodo3
+    restart: unless-stopped
+    environment:
+      - NODE_NAME=nodo3
+      - PORT=5002
+      - METRICS_PORT=8002
+      - PEERS=nodo1:5000,nodo2:5001
+    ports:
+      - "5002:5002"
+      - "8002:8002"
