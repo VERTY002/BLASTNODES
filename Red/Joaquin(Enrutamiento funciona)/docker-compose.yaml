@@ -4,22 +4,21 @@ services:
     image: app_pae
     hostname: node1
     environment:
-      - PORT=5000 #Puerto en el que escucha el servidor
-      - PEERS=node2:5000,node3:5000 #Conexiones directas "físicas"
-      - DESTINOS=node4 #Nodos hacia los que genera trafico
-      - ROUTES=node4:node2:5000 #tabla de enrutamiento estatica, Formato es el siguiente- NodoFinal:Nodoalqueenviar:puerto
-      
+      - PORT=5000
+      - PEERS=node2:5000
+      - DESTINOS=node8
+      - ROUTES=
     volumes:
-      - ./app.py:/app/app.py #El Volumen lo podeis dejar o quitar, es para que se actualice el contenedor con los cambios
-      
+      - ./app.py:/app/app.py
+
   node2:
     image: app_pae
     hostname: node2
     environment:
       - PORT=5000
-      - PEERS=node1:5000,node4:5000
-      - DESTINOS=
-      - ROUTES=node3:node4:5000
+      - PEERS=node1:5000,node4:5000,node6:5000,node5:5000,node10:5000
+      - DESTINOS=node7
+      - ROUTES=node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000
     volumes:
       - ./app.py:/app/app.py
   
@@ -29,9 +28,9 @@ services:
     hostname: node3
     environment:
       - PORT=5000
-      - PEERS=node1:5000,node4:5000
+      - PEERS=node4:5000,node6:5000
       - DESTINOS=
-      - ROUTES=node2:node4:5000
+      - ROUTES=
     volumes:
       - ./app.py:/app/app.py
   
@@ -41,9 +40,77 @@ services:
     hostname: node4
     environment:
       - PORT=5000
-      - PEERS=node2:5000,node3:5000
+      - PEERS=node3:5000,node2:5000
       - DESTINOS=
-      - ROUTES=node1:node2:5000
+      - ROUTES=
+    volumes:
+      - ./app.py:/app/app.py
+
+  node5:
+    image: app_pae
+    hostname: node5
+    environment:
+      - PORT=5000
+      - PEERS=node2:5000,node9:5000,node6:5000
+      - DESTINOS=
+      - ROUTES=node10:node9:5000,node1:node2:5000,node4:node2:5000,node3:node6:5000,node7:node9:5000,node8:node6:5000
+    volumes:
+      - ./app.py:/app/app.py
+
+  
+
+  node6:
+    image: app_pae
+    hostname: node6
+    environment:
+      - PORT=5000
+      - PEERS=node2:5000,node3:5000,node5:5000,node7:5000,node8:5000
+      - DESTINOS=
+      - ROUTES=node9:node5:5000,node10:node2:5000,node1:node2:5000,node4:node3:5000
+    volumes:
+      - ./app.py:/app/app.py
+
+  node7:
+    image: app_pae
+    hostname: node7
+    environment:
+      - PORT=5000
+      - PEERS=node6:5000,node8:5000,node9:5000
+      - DESTINOS=
+      - ROUTES=node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node9:5000,node10:node9:5000
+    volumes:
+      - ./app.py:/app/app.py
+
+  node8:
+    image: app_pae
+    hostname: node8
+    environment:
+      - PORT=5000
+      - PEERS=node7:5000,node6:5000
+      - DESTINOS=
+      - ROUTES=
+    volumes:
+      - ./app.py:/app/app.py
+
+  node9:
+    image: app_pae
+    hostname: node9
+    environment:
+      - PORT=5000
+      - PEERS=node10:5000,node5:5000,node7:5000
+      - DESTINOS=node4
+      - ROUTES=node1:node10:5000,node2:node5:5000,node3:node5:5000,node4:node5:5000,node6:node7:5000,node8:node7:5000
+    volumes:
+      - ./app.py:/app/app.py
+  
+  node10:
+    image: app_pae
+    hostname: node10
+    environment:
+      - PORT=5000
+      - PEERS=node2:5000,node9:5000
+      - DESTINOS=
+      - ROUTES=
     volumes:
       - ./app.py:/app/app.py
   
