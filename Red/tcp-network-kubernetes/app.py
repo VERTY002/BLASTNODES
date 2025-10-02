@@ -34,6 +34,7 @@ for r in ROUTES:
 # -------------------------
 # Función del servidor TCP
 # -------------------------
+
 def server():
     """Inicia un servidor TCP para recibir conexiones entran tes de otros nodos."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -119,7 +120,6 @@ def broadcast_message(msg, exclude_host=None):
     for peer in peers_list:
         if peer["name"] == exclude_host:
             continue  # Evitar reenvío al remitente
-
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(1)

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node1
+  template:
+    metadata:
+      labels:
+        app: node1
+    spec:
+      hostname: node1
+      containers:
+      - name: node1
+        image: ivancedo/tcp-node:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: PORT
+          value: "5000"
+        - name: PEERS
+          value: "node2:5001"
+        - name: DESTINOS
+          value: "node2"
+        - name: ROUTES
+          value: ""
