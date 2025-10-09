@@ -1,7 +1,6 @@
-version: "3.9"
 services:
   node1:
-    image: app_pae
+    build: .
     hostname: node1
     environment:
       - PORT=5000
@@ -12,7 +11,7 @@ services:
       - ./app.py:/app/app.py
 
   node2:
-    image: app_pae
+    build: .
     hostname: node2
     environment:
       - PORT=5000
@@ -24,7 +23,7 @@ services:
   
 
   node3:
-    image: app_pae
+    build: .
     hostname: node3
     environment:
       - PORT=5000
@@ -36,7 +35,7 @@ services:
   
 
   node4:
-    image: app_pae
+    build: .
     hostname: node4
     environment:
       - PORT=5000
@@ -47,7 +46,7 @@ services:
       - ./app.py:/app/app.py
 
   node5:
-    image: app_pae
+    build: .
     hostname: node5
     environment:
       - PORT=5000
@@ -60,7 +59,7 @@ services:
   
 
   node6:
-    image: app_pae
+    build: .
     hostname: node6
     environment:
       - PORT=5000
@@ -71,7 +70,7 @@ services:
       - ./app.py:/app/app.py
 
   node7:
-    image: app_pae
+    build: .
     hostname: node7
     environment:
       - PORT=5000
@@ -82,7 +81,7 @@ services:
       - ./app.py:/app/app.py
 
   node8:
-    image: app_pae
+    build: .
     hostname: node8
     environment:
       - PORT=5000
@@ -93,7 +92,7 @@ services:
       - ./app.py:/app/app.py
 
   node9:
-    image: app_pae
+    build: .
     hostname: node9
     environment:
       - PORT=5000
@@ -104,7 +103,7 @@ services:
       - ./app.py:/app/app.py
   
   node10:
-    image: app_pae
+    build: .
     hostname: node10
     environment:
       - PORT=5000

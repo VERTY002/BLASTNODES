@@ -1,143 +1,251 @@
-import socket
-import threading
-import time
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Network Node Module
+-------------------
+Este módulo implementa un nodo TCP capaz de enviar, recibir y reenviar mensajes JSON
+a otros nodos dentro de una topología definida mediante variables de entorno.
+
+Características:
+- Comunicación P2P mediante TCP.
+- Reenvío de mensajes usando tabla de enrutamiento dinámica.
+- Logs en formato JSON estructurado.
+- Reintentos y control de errores.
+"""
+
 import os
 import json
+import time
+import socket
+import threading
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Dict, List, Optional
+
+
+# ==================== CONFIGURACIÓN GLOBAL ====================
 
 HOST = "0.0.0.0"
-PORT = int(os.getenv("PORT"))
+PORT = int(os.getenv("PORT", "5000"))
+SOCKET_TIMEOUT = 1.0  # segundos
+MESSAGE_INTERVAL = 5  # intervalo entre envíos de mensajes
 
-# Vecinos físicos (nodos directamente conectados)
-PEERS = os.getenv("PEERS", "").split(",")
-peers_list = []
-for p in PEERS:
-    if ":" in p:
-        name, port = p.split(":")
-        peers_list.append({"name": name, "port": int(port)})
+# Variables de entorno: PEERS, DESTINOS, ROUTES
+# Ejemplos:
+#   PEERS="nodoA:5001,nodoB:5002"
+#   DESTINOS="nodoB,nodoC"
+#   ROUTES="nodoC:nodoB:5002"
 
-# Destinos a los que este nodo genera tráfico
-DESTINOS = os.getenv("DESTINOS", "").split(",")
-
-# Tabla de enrutamiento (destino -> vecino por el que salir)
-ROUTES = os.getenv("ROUTES", "").split(",")
-routing_table = {}
-for r in ROUTES:
-    if ":" in r:
-        dest, next_name, next_port = r.split(":")
-        routing_table[dest] = {"name": next_name, "port": int(next_port)}
+PEERS_ENV = os.getenv("PEERS", "")
+DESTINOS_ENV = os.getenv("DESTINOS", "")
+ROUTES_ENV = os.getenv("ROUTES", "")
 
 
-# ---------------- Servidor ----------------
-def server():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((HOST, PORT))
-        s.listen()
-        print(f"Servidor escuchando en {HOST}:{PORT}", flush=True)
-        while True:
-            conn, addr = s.accept()
-            threading.Thread(target=handle_connection, args=(conn,), daemon=True).start()
+# ==================== MODELOS DE DATOS ====================
+
+@dataclass
+class Peer:
+    """Representa un nodo vecino conocido."""
+    name: str
+    port: int
 
 
-def handle_connection(conn):
-    with conn:
-        data = conn.recv(4096).decode()
-        if data:
+@dataclass
+class Route:
+    """Representa una entrada de la tabla de enrutamiento."""
+    destination: str
+    next_hop: Peer
+
+
+# ==================== UTILIDADES ====================
+
+def parse_peers(env_str: str) -> List[Peer]:
+    """Convierte la variable PEERS en una lista de Peer."""
+    peers = []
+    for entry in env_str.split(","):
+        if ":" in entry:
+            name, port = entry.split(":")
+            peers.append(Peer(name=name.strip(), port=int(port)))
+    return peers
+
+
+def parse_routes(env_str: str) -> Dict[str, Route]:
+    """Convierte la variable ROUTES en un diccionario de rutas."""
+    routes = {}
+    for entry in env_str.split(","):
+        if ":" in entry:
+            dest, next_name, next_port = entry.split(":")
+            routes[dest.strip()] = Route(
+                destination=dest.strip(),
+                next_hop=Peer(name=next_name.strip(), port=int(next_port))
+            )
+    return routes
+
+
+def parse_destinations(env_str: str) -> List[str]:
+    """Convierte la variable DESTINOS en una lista de strings."""
+    return [d.strip() for d in env_str.split(",") if d.strip()]
+
+
+# ==================== LOGGING ESTRUCTURADO ====================
+
+def log_json(level: str, event: str, message: str, msg_obj: Optional[dict] = None, extra: Optional[dict] = None):
+    """Imprime logs estructurados en formato JSON para fácil ingesta por ELK, Datadog, etc."""
+    log_entry = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "level": level,
+        "node": socket.gethostname(),
+        "event": event,
+        "message": message,
+    }
+
+    if msg_obj:
+        log_entry["data"] = msg_obj
+    if extra:
+        log_entry["extra"] = extra
+
+    print(json.dumps(log_entry, ensure_ascii=False), flush=True)
+
+
+# ==================== FUNCIONALIDAD DE RED ====================
+
+class Node:
+    """Nodo TCP que puede enviar y reenviar mensajes entre pares."""
+
+    def __init__(self, host: str, port: int, peers: List[Peer], routes: Dict[str, Route], destinations: List[str]):
+        self.host = host
+        self.port = port
+        self.peers = peers
+        self.routes = routes
+        self.destinations = destinations
+        self.hostname = socket.gethostname()
+
+    # ----------- SERVIDOR -----------
+
+    def start_server(self):
+        """Inicia el servidor TCP que escucha conexiones entrantes."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+            server_socket.bind((self.host, self.port))
+            server_socket.listen()
+            log_json("INFO", "server_start", f"Servidor escuchando en {self.host}:{self.port}")
+
+            while True:
+                conn, _ = server_socket.accept()
+                threading.Thread(target=self._handle_connection, args=(conn,), daemon=True).start()
+
+    def _handle_connection(self, conn: socket.socket):
+        """Procesa cada conexión TCP entrante."""
+        with conn:
             try:
+                data = conn.recv(4096).decode()
+                if not data:
+                    return
+
                 msg = json.loads(data)
-                dest = msg["destination"]
-                payload = msg["payload"]
-                prev_hop = msg.get("last_hop")
+                destination = msg.get("destination")
+                payload = msg.get("payload")
+                last_hop = msg.get("last_hop")
 
-                if dest == socket.gethostname():
-                    print(f"{socket.gethostname()} recibió mensaje: {payload}", flush=True)
+                if destination == self.hostname:
+                    log_json("INFO", "message_received", f"Mensaje recibido de {last_hop}: {payload}", msg)
                 else:
-                    forward_message(msg, exclude_host=prev_hop)
+                    log_json("INFO", "message_forward", f"Reenviando mensaje hacia {destination}", msg)
+                    self.forward_message(msg, exclude_host=last_hop)
+
+            except json.JSONDecodeError:
+                log_json("ERROR", "invalid_json", "El mensaje recibido no es un JSON válido")
             except Exception as e:
-                print("Error procesando mensaje:", e, flush=True)
+                log_json("ERROR", "message_processing_error", f"Error procesando mensaje: {e}")
 
+    # ----------- CLIENTE -----------
 
-# ---------------- Reenvío ----------------
-def forward_message(msg, exclude_host=None):
-    dest = msg["destination"]
-    msg["last_hop"] = socket.gethostname()
+    def start_client(self):
+        """Inicia el proceso que genera tráfico hacia los destinos configurados."""
+        while True:
+            if not self.destinations:
+                time.sleep(1)
+                continue
 
-    # --- 1. Verificar si el destino está directamente conectado ---
-    for peer in peers_list:
-        if dest == peer["name"]:
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.settimeout(1)
-                    s.connect((peer["name"], peer["port"]))
-                    s.sendall(json.dumps(msg).encode())
-                print(f"{socket.gethostname()} envía directo a {dest}", flush=True)
+            for dest in self.destinations:
+                message = {
+                    "type": "data",
+                    "source": self.hostname,
+                    "destination": dest,
+                    "payload": f"Hola desde {self.hostname} a {dest}",
+                    "last_hop": self.hostname,
+                }
+                log_json("INFO", "message_send", f"Enviando mensaje a {dest}", message)
+                self.forward_message(message)
+
+            time.sleep(MESSAGE_INTERVAL)
+
+    # ----------- REENVÍO DE MENSAJES -----------
+
+    def forward_message(self, msg: dict, exclude_host: Optional[str] = None):
+        """Intenta enviar el mensaje hacia su destino directo o según la tabla de rutas."""
+        dest = msg["destination"]
+        msg["last_hop"] = self.hostname
+
+        # 1️⃣ Intentar envío directo
+        for peer in self.peers:
+            if dest == peer.name:
+                if self._send_to_peer(peer, msg, "direct_send"):
+                    return
+
+        # 2️⃣ Intentar vía tabla de rutas
+        if dest in self.routes:
+            next_hop = self.routes[dest].next_hop
+            if next_hop.name != exclude_host and self._send_to_peer(next_hop, msg, "route_forward"):
                 return
-            except Exception as e:
-                print(f"{socket.gethostname()} fallo ruta directa a {peer['name']}: {e}", flush=True)
-    # --- 2. Si hay ruta en la tabla de enrutamiento ---
-    if dest in routing_table:
-        peer = routing_table[dest]
-        if peer["name"] == exclude_host:
-            return fallo_ruta(msg,peer,exclude_host,dest)
+
+        # 3️⃣ Intentar reenviar por otros vecinos (fallback)
+        self._handle_reroute(msg, exclude_host, dest)
+
+    def _send_to_peer(self, peer: Peer, msg: dict, event: str) -> bool:
+        """Intenta enviar un mensaje a un vecino."""
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(1)
-                s.connect((peer["name"], peer["port"]))
-                s.sendall(json.dumps(msg).encode())
-            print(f"{socket.gethostname()} reenvía a {peer['name']} hacia {dest}", flush=True)
-            return
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(SOCKET_TIMEOUT)
+                sock.connect((peer.name, peer.port))
+                sock.sendall(json.dumps(msg).encode())
+
+            log_json("INFO", event, f"Mensaje enviado a {peer.name}:{peer.port}", msg)
+            return True
         except Exception as e:
-            print(f"{socket.gethostname()} fallo ruta en tabla a {peer['name']}: {e}", flush=True)
-            # fallo ruta en caso de fallo
-            return fallo_ruta(msg,peer,exclude_host,dest)
+            log_json("WARNING", "send_failed", f"Fallo al enviar a {peer.name}:{peer.port} - {e}")
+            return False
 
-    # --- 3. Si no hay ruta conocida ---
-    
-    print(f"{socket.gethostname()} no tiene ruta hacia {dest}, intenta enviar a algún vecino", flush=True)
-    fallo_ruta(msg, {"name": None, "port": None}, exclude_host, dest)
+    def _handle_reroute(self, msg: dict, exclude_host: Optional[str], dest: str):
+        """Intentar reenvío por vecinos alternativos si la ruta falla."""
+        for peer in self.peers:
+            if peer.name == exclude_host:
+                continue
+
+            if self._send_to_peer(peer, msg, "reroute_success"):
+                # Actualizar la tabla de enrutamiento dinámica
+                self.routes[dest] = Route(destination=dest, next_hop=peer)
+                log_json("INFO", "routing_update", f"Ruta hacia {dest} actualizada vía {peer.name}")
+                return
+
+        log_json("WARNING", "no_route_available", f"No fue posible reenviar mensaje hacia {dest}")
 
 
+# ==================== EJECUCIÓN PRINCIPAL ====================
 
-def fallo_ruta(msg, prev_peer, exclude_host,dest):
-    for peer in peers_list:
-        # Evitar reenviar al peer que ya falló o al que lo envió antes
-        if peer["name"] == prev_peer["name"]:
-            continue
-        if peer["name"] == exclude_host:
-            continue
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(1)
-                s.connect((peer["name"], peer["port"]))
-                s.sendall(json.dumps(msg).encode())
-            print(f"{socket.gethostname()} Después del fallo reenvío a {peer['name']} hacia {msg['destination']}", flush=True)
-            routing_table[dest] = peer #Actualizamos ruta
-            print(f"{socket.gethostname()} actualiza su ruta hacia {dest} a través de {peer}") 
-            break  #Salimos después de reenviar a  uno
-        except Exception as e:
-            print(f"{socket.gethostname()} fallo reenvío a {peer['name']}: {e}", flush=True)
+def main():
+    peers = parse_peers(PEERS_ENV)
+    routes = parse_routes(ROUTES_ENV)
+    destinations = parse_destinations(DESTINOS_ENV)
 
-# ---------------- Cliente ----------------
-def client():
+    node = Node(host=HOST, port=PORT, peers=peers, routes=routes, destinations=destinations)
+
+    threading.Thread(target=node.start_server, daemon=True).start()
+    threading.Thread(target=node.start_client, daemon=True).start()
+
+    # Mantener el hilo principal activo
     while True:
-        if not DESTINOS or DESTINOS == [""]:
-            time.sleep(1)
-            continue
-
-        for dest in DESTINOS:
-            msg = {
-                "type": "data",
-                "source": socket.gethostname(),
-                "destination": dest,
-                "payload": f"Hola desde {socket.gethostname()} a {dest}",
-                "last_hop": socket.gethostname()  # el origen es el primer "last_hop"
-            }
-            forward_message(msg)
-        time.sleep(5)
+        time.sleep(1)
 
 
-# ---------------- Lanzar hilos ----------------
-threading.Thread(target=server, daemon=True).start()
-threading.Thread(target=client, daemon=True).start()
-
-while True:
-    time.sleep(1)
+if __name__ == "__main__":
+    main()
