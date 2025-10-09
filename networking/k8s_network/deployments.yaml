@@ -10,7 +10,7 @@ spec:
     spec:
       containers: # Lista de contenedores dentro del Pod.
         - name: node1 # Nombre lógico del contenedor (visible en logs, etc.).
-          image: verty002/blast-nodes:latest # Imagen del contenedor (cámbiala por la tuya subida al registry).
+          image: verty002/blast-nodes:v5 # Imagen del contenedor (cámbiala por la tuya subida al registry).
           imagePullPolicy: IfNotPresent # Tira de la imagen sólo si no existe en el nodo (evita pulls cada vez).
           ports: [{ containerPort: 5000 }] # Puerto que tu proceso escucha dentro del contenedor (informativo para K8s/NPs).
           env:
@@ -47,7 +47,7 @@ spec:
     spec:
       containers:
         - name: node2
-          image: verty002/blast-nodes:latest
+          image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 5000 }]
           env:
@@ -86,7 +86,7 @@ spec:
     spec:
       containers:
         - name: node3
-          image: verty002/blast-nodes:latest
+          image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 5000 }]
           env:
@@ -125,7 +125,7 @@ spec:
     spec:
       containers:
         - name: node4
-          image: verty002/blast-nodes:latest
+          image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 5000 }]
           env:
@@ -164,7 +164,7 @@ spec:
     spec:
       containers:
         - name: node5
-          image: verty002/blast-nodes:latest
+          image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 5000 }]
           env:
@@ -203,7 +203,7 @@ spec:
     spec:
       containers:
         - name: node6
-          image: verty002/blast-nodes:latest
+          image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 5000 }]
           env:
@@ -242,7 +242,7 @@ spec:
     spec:
       containers:
         - name: node7
-          image: verty002/blast-nodes:latest
+          image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 5000 }]
           env:
@@ -281,7 +281,7 @@ spec:
     spec:
       containers:
         - name: node8
-          image: verty002/blast-nodes:latest
+          image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 5000 }]
           env:
@@ -320,7 +320,7 @@ spec:
     spec:
       containers:
         - name: node9
-          image: verty002/blast-nodes:latest
+          image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 5000 }]
           env:
@@ -359,7 +359,7 @@ spec:
     spec:
       containers:
         - name: node10
-          image: verty002/blast-nodes:latest
+          image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 5000 }]
           env:
