@@ -9,7 +9,7 @@ WORKDIR /app
 
 COPY app/ /app
 EXPOSE 5000
-CMD ["python", "-u", "/app/app.py"]
+CMD ["python", "-u", "/app.py"]
 
 
 
