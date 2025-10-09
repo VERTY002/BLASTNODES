@@ -9,4 +9,4 @@ spec:
   - protocol: TCP
     port: 5000
     targetPort: 5000
-  clusterIP: None  # Headless para permitir resolución DNS directa por nombre
+  clusterIP: None
