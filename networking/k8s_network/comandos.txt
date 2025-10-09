@@ -1,0 +1,4 @@
+minikube start --driver=docker 
+kubectl apply -f deployments.yaml
+kubectl apply -f services
+kubectls get pods
