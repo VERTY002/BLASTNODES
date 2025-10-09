@@ -73,12 +73,11 @@ def forward_message(msg, exclude_host=None):
                 return
             except Exception as e:
                 print(f"{socket.gethostname()} fallo ruta directa a {peer['name']}: {e}", flush=True)
-                # broadcast en caso de fallo
-                return broadcast_message(msg, exclude_host)
-
     # --- 2. Si hay ruta en la tabla de enrutamiento ---
     if dest in routing_table:
         peer = routing_table[dest]
+        if peer["name"] == exclude_host:
+            return fallo_ruta(msg,peer,exclude_host,dest)
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(1)
@@ -88,16 +87,21 @@ def forward_message(msg, exclude_host=None):
             return
         except Exception as e:
             print(f"{socket.gethostname()} fallo ruta en tabla a {peer['name']}: {e}", flush=True)
-            # broadcast en caso de fallo
-            return broadcast_message(msg, exclude_host)
+            # fallo ruta en caso de fallo
+            return fallo_ruta(msg,peer,exclude_host,dest)
 
     # --- 3. Si no hay ruta conocida ---
-    broadcast_message(msg, exclude_host)
+    
+    print(f"{socket.gethostname()} no tiene ruta hacia {dest}, intenta enviar a algún vecino", flush=True)
+    fallo_ruta(msg, {"name": None, "port": None}, exclude_host, dest)
 
 
-def broadcast_message(msg, exclude_host=None):
-    # Reenvía el mensaje a todos los vecinos menos al que lo envió
+
+def fallo_ruta(msg, prev_peer, exclude_host,dest):
     for peer in peers_list:
+        # Evitar reenviar al peer que ya falló o al que lo envió antes
+        if peer["name"] == prev_peer["name"]:
+            continue
         if peer["name"] == exclude_host:
             continue
         try:
@@ -105,11 +109,12 @@ def broadcast_message(msg, exclude_host=None):
                 s.settimeout(1)
                 s.connect((peer["name"], peer["port"]))
                 s.sendall(json.dumps(msg).encode())
-            print(f"{socket.gethostname()} broadcast a {peer['name']} hacia {msg['destination']}", flush=True)
+            print(f"{socket.gethostname()} Después del fallo reenvío a {peer['name']} hacia {msg['destination']}", flush=True)
+            routing_table[dest] = peer #Actualizamos ruta
+            print(f"{socket.gethostname()} actualiza su ruta hacia {dest} a través de {peer}") 
+            break  #Salimos después de reenviar a  uno
         except Exception as e:
-            print(f"{socket.gethostname()} fallo broadcast a {peer['name']}: {e}", flush=True)
-
-
+            print(f"{socket.gethostname()} fallo reenvío a {peer['name']}: {e}", flush=True)
 
 # ---------------- Cliente ----------------
 def client():
@@ -120,6 +125,7 @@ def client():
 
         for dest in DESTINOS:
             msg = {
+                "type": "data",
                 "source": socket.gethostname(),
                 "destination": dest,
                 "payload": f"Hola desde {socket.gethostname()} a {dest}",
