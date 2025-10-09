@@ -85,5 +85,3 @@ Fields with name: Value
     Base: Red (conexión caída = 0)
     0.001: Gray (conexión sin tráfico)
     0.5: Green (conexión con tráfico = 1)
-
-El problema es que en organize fields no me sale el campo id, ademas en fields override como no me sale el campo id no me deja ponerlo y el de value que si me deja lo unico que puedo añadir es un data link nada mas no puedo hacer esa configuracion
