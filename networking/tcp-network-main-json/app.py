@@ -14,7 +14,7 @@ import time
 import socket
 import uuid
 import threading
-from datetime import datetime
+from datetime import datetime, UTC
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -75,14 +75,14 @@ def parse_destinations(env_str: str) -> List[str]:
 def log_json(level: str, event: str, message: str, msg_obj: Optional[dict] = None, extra: Optional[dict] = None):
     """Imprime logs en formato JSON estructurado."""
     entry = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(UTC).isoformat(),
         "level": level,
         "node": socket.gethostname(),
         "event": event,
         "message": message,
     }
     if msg_obj:
-        entry["message_data"] = msg_obj
+        entry["data"] = msg_obj
     if extra:
         entry["extra"] = extra
     print(json.dumps(entry, ensure_ascii=False), flush=True)
@@ -148,11 +148,10 @@ class Node:
                     "source": self.hostname,
                     "destination": dest,
                     "payload": f"Hola desde {self.hostname} a {dest}",
-                    "last_hop": self.hostname,
                     "route": [self.hostname],
                     "status": "IN_PROGRESS"
                 }
-                log_json("INFO", "message_send", f"Enviando mensaje a {dest}", msg)
+                log_json("MSG", "message_send", f"Enviando mensaje a {dest}", msg)
                 self.forward_message(msg)
             time.sleep(MESSAGE_INTERVAL)
 
@@ -162,19 +161,19 @@ class Node:
         dest = msg["destination"]
         msg["last_hop"] = self.hostname
 
-        # 1️⃣ Intentar directo
+        # 1️. Intentar directo
         for peer in self.peers:
             if dest == peer.name:
                 if self._send_to_peer(peer, msg, "direct_send"):
                     return
 
-        # 2️⃣ Por tabla
+        # 2️. Por tabla
         if dest in self.routes:
             next_hop = self.routes[dest].next_hop
             if next_hop.name != exclude_host and self._send_to_peer(next_hop, msg, "route_forward"):
                 return
 
-        # 3️⃣ Alternativa
+        # 3️. Alternativa
         self._handle_reroute(msg, exclude_host, dest)
 
     def _send_to_peer(self, peer: Peer, msg: dict, event: str) -> bool:
