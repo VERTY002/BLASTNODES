@@ -1,0 +1,288 @@
+apiVersion: apps/v1
+kind: Deployment # Clase de objeto: un controlador que asegura N réplicas de un Pod.
+metadata:
+  name: node1 # Nombre del Deployment (y base del ReplicaSet que creará).
+spec:
+  replicas: 1 # Nº de Pods deseados. Aquí 1 para identidad estable por Service.
+  selector: { matchLabels: { app: node1 } } # Cómo identifica el Deployment qué Pods le pertenecen . app:node 1 # -> Debe coincidir EXACTAMENTE con template.metadata.labels.
+  template:  # Plantilla del Pod que gestionará este Deployment.
+    metadata: { labels: { app: node1 } }
+    spec:
+      containers: # Lista de contenedores dentro del Pod.
+        - name: node1 # Nombre lógico del contenedor (visible en logs, etc.).
+          image: ivancedo/tcp-node-main:latest # Imagen del contenedor (cámbiala por la tuya subida al registry).
+          imagePullPolicy: IfNotPresent # Tira de la imagen sólo si no existe en el nodo (evita pulls cada vez).
+          ports: [{ containerPort: 5000 }] # Puerto que tu proceso escucha dentro del contenedor (informativo para K8s/NPs).
+          env:
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000" }
+            - { name: DESTINOS, value: "node8" }
+            - { name: ROUTES, value: "" }
+
+          readinessProbe: # Comprobación de “listo para recibir tráfico”.
+            tcpSocket: { port: 5000 } # K8s hace un TCP connect al 5000 dentro del contenedor.
+            initialDelaySeconds: 3 # Espera 3s tras arrancar antes de la 1ª prueba (deja calentar tu app).
+            periodSeconds: 5 # Repite la comprobación cada 5s.
+
+---
+#las --- son para separa los nodos sino pilla el del final el node10          
+apiVersion: apps/v1
+kind: Deployment 
+metadata:
+  name: node2
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node2 } }
+  template:
+    metadata: { labels: { app: node2 } }
+    spec:
+      containers:
+        - name: node2
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node1:5000,node4:5000,node6:5000,node5:5000,node10:5000" }
+            - { name: DESTINOS, value: "node7" }
+            - { name: ROUTES, value: "node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+         
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node3
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node3 } }
+  template:
+    metadata: { labels: { app: node3 } }
+    spec:
+      containers:
+        - name: node3
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node4:5000,node6:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node4
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node4 } }
+  template:
+    metadata: { labels: { app: node4 } }
+    spec:
+      containers:
+        - name: node4
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node3:5000,node2:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "" }
+          
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node5
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node5 } }
+  template:
+    metadata: { labels: { app: node5 } }
+    spec:
+      containers:
+        - name: node5
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node9:5000,node6:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node10:node9:5000,node1:node2:5000,node4:node2:5000,node3:node6:5000,node7:node9:5000,node8:node6:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node6
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node6 } }
+  template:
+    metadata: { labels: { app: node6 } }
+    spec:
+      containers:
+        - name: node6
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node3:5000,node5:5000,node7:5000,node8:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node9:node5:5000,node10:node2:5000,node1:node2:5000,node4:node3:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node7
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node7 } }
+  template:
+    metadata: { labels: { app: node7 } }
+    spec:
+      containers:
+        - name: node7
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node6:5000,node8:5000,node9:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node9:5000,node10:node9:5000" }
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node8
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node8 } }
+  template:
+    metadata: { labels: { app: node8 } }
+    spec:
+      containers:
+        - name: node8
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node7:5000,node6:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node9
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node9 } }
+  template:
+    metadata: { labels: { app: node9 } }
+    spec:
+      containers:
+        - name: node9
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node10:5000,node5:5000,node7:5000" }
+            - { name: DESTINOS, value: "node4" }
+            - { name: ROUTES, value: "node1:node10:5000,node2:node5:5000,node3:node5:5000,node4:node5:5000,node6:node7:5000,node8:node7:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node10
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node10 } }
+  template:
+    metadata: { labels: { app: node10 } }
+    spec:
+      containers:
+        - name: node10
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node9:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "" }
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
