@@ -32,31 +32,40 @@ spec:
             tcpSocket: { port: 5000 } # K8s hace un TCP connect al 5000 dentro del contenedor.
             initialDelaySeconds: 3 # Espera 3s tras arrancar antes de la 1ª prueba (deja calentar tu app).
             periodSeconds: 5 # Repite la comprobación cada 5s.
-
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
 ---
 #las --- son para separa los nodos sino pilla el del final el node10          
 apiVersion: apps/v1
-kind: Deployment 
+kind: Deployment
 metadata:
   name: node2
 spec:
   replicas: 1
-  selector: { matchLabels: { app: node2 } }
+  selector:
+    matchLabels: { app: node2 }
   template:
-    metadata: { labels: { app: node2 } }
+    metadata:
+      labels: { app: node2 }
     spec:
       containers:
         - name: node2
           image: verty002/blast-nodes:v5
           imagePullPolicy: IfNotPresent
-          ports: [{ containerPort: 5000 }]
+          ports:
+            - containerPort: 5000
           env:
             - { name: SELF_NAME, value: "node2" }
             - { name: PORT, value: "5000" }
             - { name: PEERS, value: "node1:5000,node4:5000,node6:5000,node5:5000,node10:5000" }
             - { name: DESTINOS, value: "node7" }
             - { name: ROUTES, value: "node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000" }
-
             - { name: CONNECT_TIMEOUT, value: "5" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
@@ -66,12 +75,19 @@ spec:
             - { name: RETRIES_ROUTE, value: "1" }
             - { name: RETRIES_BROAD, value: "0" }
             - { name: IDLE_SLEEP, value: "1.0" }
-
           readinessProbe:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
             periodSeconds: 5
-         
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
+
 ---
 
 apiVersion: apps/v1
@@ -110,7 +126,14 @@ spec:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
             periodSeconds: 5
-
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
 ---
 
 apiVersion: apps/v1
@@ -149,7 +172,14 @@ spec:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
             periodSeconds: 5
-
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
 ---
 
 apiVersion: apps/v1
@@ -188,7 +218,14 @@ spec:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
             periodSeconds: 5
-
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
 ---
 
 apiVersion: apps/v1
@@ -227,7 +264,14 @@ spec:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
             periodSeconds: 5
-
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
 ---
 
 apiVersion: apps/v1
@@ -266,7 +310,14 @@ spec:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
             periodSeconds: 5
-
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
 ---
 
 apiVersion: apps/v1
@@ -305,7 +356,14 @@ spec:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
             periodSeconds: 5
-
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
 ---
 
 apiVersion: apps/v1
@@ -344,7 +402,14 @@ spec:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
             periodSeconds: 5
-
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
 ---
 
 apiVersion: apps/v1
@@ -383,4 +448,11 @@ spec:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
             periodSeconds: 5
-
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
