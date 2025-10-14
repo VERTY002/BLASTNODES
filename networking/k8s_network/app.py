@@ -1,208 +1,218 @@
-
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import socket, threading, time, os, json, random, uuid
-from datetime import datetime
-from typing import Optional
+"""
+Network Node Module — versión mejorada con logs JSON
+----------------------------------------------------
+- Cada nodo imprime logs estructurados en formato JSON.
+- Incluye origen, destino, ruta seguida, fallos de reenvío y rutas actualizadas.
+- Compatible con Docker logs o Docker Desktop.
+"""
+
+import os
+import json
+import time
+import socket
+import uuid
+import threading
+from datetime import datetime, UTC
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+
+# ==================== CONFIGURACIÓN ====================
 
 HOST = "0.0.0.0"
 PORT = int(os.getenv("PORT", "5000"))
-SELF_NAME = os.getenv("SELF_NAME", socket.gethostname())
+SOCKET_TIMEOUT = 1.0
+MESSAGE_INTERVAL = 5
 
-# ---- Configuración ajustable ----
-CONNECT_TIMEOUT = float(os.getenv("CONNECT_TIMEOUT", "5"))
-CLIENT_INTERVAL = float(os.getenv("CLIENT_INTERVAL", "5"))
-CLIENT_JITTER   = float(os.getenv("CLIENT_JITTER", "1.0"))
-BACKOFF_BASE    = float(os.getenv("BACKOFF_BASE", "1.0"))
-BACKOFF_MAX     = float(os.getenv("BACKOFF_MAX", "10.0"))
-RETRIES_DIRECT  = int(os.getenv("RETRIES_DIRECT", "1"))
-RETRIES_ROUTE   = int(os.getenv("RETRIES_ROUTE", "1"))
-RETRIES_BROAD   = int(os.getenv("RETRIES_BROAD", "0"))
-IDLE_SLEEP      = float(os.getenv("IDLE_SLEEP", "1.0"))
+PEERS_ENV = os.getenv("PEERS", "")
+DESTINOS_ENV = os.getenv("DESTINOS", "")
+ROUTES_ENV = os.getenv("ROUTES", "")
 
-# ---- Topología ----
-PEERS = [p for p in os.getenv("PEERS", "").split(",") if p]
-peers_list = []
-for p in PEERS:
-    if ":" in p:
-        n, port = p.split(":")
-        peers_list.append({"name": n.strip(), "port": int(port)})
 
-DESTINOS = [d for d in os.getenv("DESTINOS", "").split(",") if d]
+# ==================== MODELOS ====================
 
-ROUTES = [r for r in os.getenv("ROUTES", "").split(",") if r]
-routing_table = {}
-for r in ROUTES:
-    if ":" in r:
-        dest, next_name, next_port = r.split(":")
-        routing_table[dest.strip()] = {"name": next_name.strip(), "port": int(next_port)}
+@dataclass
+class Peer:
+    name: str
+    port: int
 
-# ---- Estado ----
-peer_backoff = {}
-peer_lastlog = {}
 
-# ---------------- JSON logger ----------------
-def log_json(level: str, event: str, msg: str, data: Optional[dict] = None):
+@dataclass
+class Route:
+    destination: str
+    next_hop: Peer
+
+
+# ==================== PARSERS ====================
+
+def parse_peers(env_str: str) -> List[Peer]:
+    peers = []
+    for entry in env_str.split(","):
+        if ":" in entry:
+            name, port = entry.split(":")
+            peers.append(Peer(name=name.strip(), port=int(port)))
+    return peers
+
+
+def parse_routes(env_str: str) -> Dict[str, Route]:
+    routes = {}
+    for entry in env_str.split(","):
+        if ":" in entry:
+            dest, next_name, next_port = entry.split(":")
+            routes[dest.strip()] = Route(destination=dest.strip(),
+                                         next_hop=Peer(name=next_name.strip(), port=int(next_port)))
+    return routes
+
+
+def parse_destinations(env_str: str) -> List[str]:
+    return [d.strip() for d in env_str.split(",") if d.strip()]
+
+
+# ==================== LOG JSON ====================
+
+def log_json(level: str, event: str, message: str, msg_obj: Optional[dict] = None, extra: Optional[dict] = None):
+    """Imprime logs en formato JSON estructurado."""
     entry = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(UTC).isoformat(),
         "level": level,
-        "node": SELF_NAME,
+        "node": socket.gethostname(),
         "event": event,
-        "message": msg,
+        "message": message,
     }
-    if data:
-        entry["data"] = data
+    if msg_obj:
+        entry["data"] = msg_obj
+    if extra:
+        entry["extra"] = extra
     print(json.dumps(entry, ensure_ascii=False), flush=True)
 
-# ---------------- Backoff helpers ----------------
-def _allow_attempt(peer):
-    _, next_ts = peer_backoff.get(peer, (0.0, 0.0))
-    return time.time() >= next_ts
 
-def _on_success(peer):
-    peer_backoff[peer] = (BACKOFF_BASE, time.time())
+# ==================== NODO ====================
 
-def _on_failure(peer):
-    cur, _ = peer_backoff.get(peer, (BACKOFF_BASE, 0.0))
-    nxt = min(max(cur * 2, BACKOFF_BASE), BACKOFF_MAX)
-    peer_backoff[peer] = (nxt, time.time() + cur + random.uniform(0, cur * 0.25))
+class Node:
+    def __init__(self, host: str, port: int, peers: List[Peer], routes: Dict[str, Route], destinations: List[str]):
+        self.host = host
+        self.port = port
+        self.peers = peers
+        self.routes = routes
+        self.destinations = destinations
+        self.hostname = socket.gethostname()
 
-# ---------------- Servidor ----------------
-def server():
-    delay = 0.5
-    while True:
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.bind((HOST, PORT))
+    # ----------- SERVIDOR -----------
+
+    def start_server(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind((self.host, self.port))
             s.listen()
-            log_json("INFO", "server_start", f"Listening on {HOST}:{PORT}")
-            break
-        except Exception as e:
-            log_json("WARNING", "server_retry", f"Bind failed: {e}, retrying {delay}s")
-            time.sleep(delay)
-            delay = min(delay * 2, 5.0)
-    with s:
-        while True:
-            try:
+            log_json("INFO", "server_start", f"Servidor escuchando en {self.host}:{self.port}")
+            while True:
                 conn, _ = s.accept()
-                threading.Thread(target=handle_connection, args=(conn,), daemon=True).start()
+                threading.Thread(target=self._handle_connection, args=(conn,), daemon=True).start()
+
+    def _handle_connection(self, conn: socket.socket):
+        with conn:
+            try:
+                data = conn.recv(4096).decode()
+                if not data:
+                    return
+                msg = json.loads(data)
+
+                destination = msg["destination"]
+                route = msg.get("route", [])
+                route.append(self.hostname)
+                msg["route"] = route
+
+                if destination == self.hostname:
+                    msg["status"] = "DELIVERED"
+                    log_json("INFO", "message_received", f"Mensaje entregado a {self.hostname}", msg)
+                else:
+                    log_json("INFO", "message_forward", f"Reenviando mensaje hacia {destination}", msg)
+                    self.forward_message(msg, exclude_host=msg.get("last_hop"))
+
             except Exception as e:
-                log_json("ERROR", "server_accept", f"Error: {e}")
-                time.sleep(0.1)
+                log_json("ERROR", "message_processing_error", f"Error procesando mensaje: {e}")
 
-def handle_connection(conn):
-    with conn:
-        data = conn.recv(4096).decode()
-        if not data:
-            return
+    # ----------- CLIENTE -----------
+
+    def start_client(self):
+        while True:
+            if not self.destinations:
+                time.sleep(1)
+                continue
+
+            for dest in self.destinations:
+                msg = {
+                    "id": str(uuid.uuid4()),
+                    "type": "data",
+                    "source": self.hostname,
+                    "destination": dest,
+                    "payload": f"Hola desde {self.hostname} a {dest}",
+                    "route": [self.hostname],
+                    "status": "IN_PROGRESS"
+                }
+                log_json("MSG", "message_send", f"Enviando mensaje a {dest}", msg)
+                self.forward_message(msg)
+            time.sleep(MESSAGE_INTERVAL)
+
+    # ----------- REENVÍO -----------
+
+    def forward_message(self, msg: dict, exclude_host: Optional[str] = None):
+        dest = msg["destination"]
+        msg["last_hop"] = self.hostname
+
+        # 1️. Intentar directo
+        for peer in self.peers:
+            if dest == peer.name:
+                if self._send_to_peer(peer, msg, "direct_send"):
+                    return
+
+        # 2️. Por tabla
+        if dest in self.routes:
+            next_hop = self.routes[dest].next_hop
+            if next_hop.name != exclude_host and self._send_to_peer(next_hop, msg, "route_forward"):
+                return
+
+        # 3️. Alternativa
+        self._handle_reroute(msg, exclude_host, dest)
+
+    def _send_to_peer(self, peer: Peer, msg: dict, event: str) -> bool:
         try:
-            msg = json.loads(data)
-            dest = msg.get("destination")
-            prev = msg.get("last_hop")
-            route = msg.get("route", [])
-            if SELF_NAME not in route:
-                route.append(SELF_NAME)
-            msg["route"] = route
-
-            if dest == SELF_NAME:
-                msg["status"] = "DELIVERED"
-                log_json("INFO", "msg_received", f"Delivered to {SELF_NAME}", msg)
-            else:
-                log_json("INFO", "msg_forward", f"Forwarding to {dest}", msg)
-                forward_message(msg, exclude_host=prev)
-        except Exception as e:
-            log_json("ERROR", "msg_error", f"Failed to process: {e}")
-
-# ---------------- Envíos ----------------
-def _try_send(name, port, msg, retries, label):
-    for attempt in range(retries + 1):
-        if not _allow_attempt(name):
-            log_json("DEBUG", "backoff_skip", f"Skipping {name} (backoff active)", {"peer": name})
-            return False
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(CONNECT_TIMEOUT)
-                s.connect((name, port))
-                s.sendall(json.dumps(msg).encode())
-            _on_success(name)
-            log_json("INFO", label, f"Sent to {name}:{port}", {"peer": name})
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(SOCKET_TIMEOUT)
+                sock.connect((peer.name, peer.port))
+                sock.sendall(json.dumps(msg).encode())
+            log_json("INFO", event, f"Mensaje enviado a {peer.name}:{peer.port}", msg)
             return True
         except Exception as e:
-            _on_failure(name)
-            log_json("WARNING", "send_fail", f"Failed to send to {name}:{port}: {e}", {"attempt": attempt})
-            time.sleep(min(0.2 * (attempt + 1), 1.0))
-    return False
+            log_json("WARNING", "send_failed", f"No se pudo enviar a {peer.name}:{peer.port} - {e}", msg)
+            return False
 
-# ---------------- Rutas ----------------
-def forward_message(msg, exclude_host=None):
-    dest = msg["destination"]
-    msg["last_hop"] = SELF_NAME
-
-    for peer in peers_list:
-        if dest == peer["name"]:
-            if _try_send(peer["name"], peer["port"], msg, RETRIES_DIRECT, "direct_send"):
+    def _handle_reroute(self, msg: dict, exclude_host: Optional[str], dest: str):
+        for peer in self.peers:
+            if peer.name == exclude_host:
+                continue
+            if self._send_to_peer(peer, msg, "reroute_success"):
+                self.routes[dest] = Route(destination=dest, next_hop=peer)
+                log_json("INFO", "routing_update", f"Ruta hacia {dest} actualizada vía {peer.name}", msg)
                 return
-            else:
-                return broadcast_message(msg, exclude_host)
+        msg["status"] = "FAILED"
+        log_json("ERROR", "no_route_available", f"No fue posible reenviar mensaje hacia {dest}", msg)
 
-    if dest in routing_table:
-        peer = routing_table[dest]
-        if peer["name"] != exclude_host:
-            if _try_send(peer["name"], peer["port"], msg, RETRIES_ROUTE, "route_forward"):
-                return
-            else:
-                return handle_reroute(msg, exclude_host, dest, peer)
 
-    handle_reroute(msg, exclude_host, dest, None)
+# ==================== MAIN ====================
 
-def handle_reroute(msg, exclude_host, dest, prev_peer):
-    for peer in peers_list:
-        if prev_peer and peer["name"] == prev_peer["name"]:
-            continue
-        if exclude_host and peer["name"] == exclude_host:
-            continue
-        if _try_send(peer["name"], peer["port"], msg, RETRIES_ROUTE, "reroute_success"):
-            routing_table[dest] = {"name": peer["name"], "port": peer["port"]}
-            log_json("INFO", "route_update", f"Updated route to {dest} via {peer['name']}")
-            return
-    msg["status"] = "FAILED"
-    log_json("ERROR", "route_failed", f"No available route to {dest}")
-
-def broadcast_message(msg, exclude_host=None):
-    any_ok = False
-    for peer in peers_list:
-        if peer["name"] == exclude_host:
-            continue
-        if _try_send(peer["name"], peer["port"], msg, RETRIES_BROAD, "broadcast"):
-            any_ok = True
-    if not any_ok:
-        time.sleep(IDLE_SLEEP)
-
-# ---------------- Cliente ----------------
-def client():
-    time.sleep(2)
+def main():
+    peers = parse_peers(PEERS_ENV)
+    routes = parse_routes(ROUTES_ENV)
+    destinations = parse_destinations(DESTINOS_ENV)
+    node = Node(HOST, PORT, peers, routes, destinations)
+    threading.Thread(target=node.start_server, daemon=True).start()
+    threading.Thread(target=node.start_client, daemon=True).start()
     while True:
-        if not DESTINOS:
-            time.sleep(IDLE_SLEEP)
-            continue
-        interval = max(0.1, CLIENT_INTERVAL + random.uniform(-CLIENT_JITTER, CLIENT_JITTER))
-        for dest in DESTINOS:
-            msg = {
-                "id": str(uuid.uuid4()),
-                "type": "data",
-                "source": SELF_NAME,
-                "destination": dest,
-                "payload": f"Hola desde {SELF_NAME} a {dest}",
-                "last_hop": SELF_NAME,
-                "route": [SELF_NAME],
-                "status": "IN_PROGRESS"
-            }
-            log_json("INFO", "msg_send", f"Sending message to {dest}", msg)
-            forward_message(msg)
-        time.sleep(interval)
+        time.sleep(1)
 
-# ---------------- Lanzar ----------------
-threading.Thread(target=server, daemon=True).start()
-threading.Thread(target=client, daemon=True).start()
-while True:
-    time.sleep(1)
+
+if __name__ == "__main__":
+    main()
+
