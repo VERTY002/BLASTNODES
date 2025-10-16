@@ -1,160 +1,298 @@
-#!/bin/bash
+apiVersion: apps/v1
+kind: Deployment # Clase de objeto: un controlador que asegura N réplicas de un Pod.
+metadata:
+  name: node1 # Nombre del Deployment (y base del ReplicaSet que creará).
+spec:
+  replicas: 1 # Nº de Pods deseados. Aquí 1 para identidad estable por Service.
+  selector: { matchLabels: { app: node1 } } # Cómo identifica el Deployment qué Pods le pertenecen . app:node 1 # -> Debe coincidir EXACTAMENTE con template.metadata.labels.
+  template:  # Plantilla del Pod que gestionará este Deployment.
+    metadata: { labels: { app: node1 } }
+    spec:
+      containers: # Lista de contenedores dentro del Pod.
+        - name: node1 # Nombre lógico del contenedor (visible en logs, etc.).
+          image: ivancedo/tcp-node-main:latest # Imagen del contenedor (cámbiala por la tuya subida al registry).
+          imagePullPolicy: IfNotPresent # Tira de la imagen sólo si no existe en el nodo (evita pulls cada vez).
+          ports: [{ containerPort: 5000 }] # Puerto que tu proceso escucha dentro del contenedor (informativo para K8s/NPs).
+          env:
+            - { name: SELF_NAME, value: "node1" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000" }
+            - { name: DESTINOS, value: "node8" }
+            - { name: ROUTES, value: "node3:node2:5000,node4:node2:5000,node5:node2:5000,node6:node2:5000,node7:node2:5000,node8:node2:5000,node9:node2:5000,node10:node2:5000" }
 
-set -e
+          readinessProbe: # Comprobación de “listo para recibir tráfico”.
+            tcpSocket: { port: 5000 } # K8s hace un TCP connect al 5000 dentro del contenedor.
+            initialDelaySeconds: 3 # Espera 3s tras arrancar antes de la 1ª prueba (deja calentar tu app).
+            periodSeconds: 5 # Repite la comprobación cada 5s.
 
-# === CONFIG ===
-CHAOS_NS="chaos-testing"
-DASHBOARD_PORT=2333
+---
+#las --- son para separa los nodos sino pilla el del final el node10          
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node2
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: node2 }
+  template:
+    metadata:
+      labels: { app: node2 }
+    spec:
+      containers:
+        - name: node2
+          image: ivancedo/tcp-node-main:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - { name: SELF_NAME, value: "node2" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node1:5000,node4:5000,node6:5000,node5:5000,node10:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000" }
 
-# === HELPERS ===
-install_if_missing() {
-  local cmd="$1"
-  local pkg="$2"
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "📦 Installing $pkg..."
-    sudo apt-get update -y >/dev/null 2>&1
-    sudo apt-get install -y "$pkg" >/dev/null 2>&1
-  else
-    echo "✅ $pkg already installed."
-  fi
-}
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
 
-# === HEADER ===
-echo "=========================================="
-echo "🚀 BlastNodes Lab Environment Initializer"
-echo "=========================================="
-echo ""
 
-# === INSTALL DEPENDENCIES ===
-install_if_missing curl curl
-install_if_missing wget wget
-install_if_missing git git
+---
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "🐳 Installing Docker..."
-  sudo apt-get remove -y docker docker-engine docker.io containerd runc >/dev/null 2>&1 || true
-  sudo apt-get install -y ca-certificates curl gnupg lsb-release >/dev/null 2>&1
-  sudo install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-    https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
-    sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-  sudo apt-get update -y >/dev/null
-  sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin >/dev/null
-  sudo systemctl enable docker
-  sudo systemctl start docker
-else
-  echo "✅ Docker already installed."
-fi
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node3
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node3 } }
+  template:
+    metadata: { labels: { app: node3 } }
+    spec:
+      containers:
+        - name: node3
+          image: ivancedo/tcp-node-main:latest 
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: SELF_NAME, value: "node3" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node4:5000,node6:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "" }
 
-if ! command -v kubectl >/dev/null 2>&1; then
-  echo "📥 Installing kubectl..."
-  curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-  sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-  rm kubectl
-else
-  echo "✅ kubectl already installed."
-fi
 
-if ! command -v minikube >/dev/null 2>&1; then
-  echo "📦 Installing Minikube..."
-  curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-  sudo install minikube /usr/local/bin/
-  rm minikube
-else
-  echo "✅ Minikube already installed."
-fi
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
 
-if ! command -v helm >/dev/null 2>&1; then
-  echo "📥 Installing Helm..."
-  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-else
-  echo "✅ Helm already installed."
-fi
+---
 
-# === START CLUSTER ===
-echo ""
-echo "🚀 Starting Minikube cluster..."
-minikube start --cpus=3 --memory=6144 --driver=docker
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node4
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node4 } }
+  template:
+    metadata: { labels: { app: node4 } }
+    spec:
+      containers:
+        - name: node4
+          image: ivancedo/tcp-node-main:latest 
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: SELF_NAME, value: "node4" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node3:5000,node2:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "" }
 
-# === APPLY DEPLOYMENTS ===
-echo ""
-echo "📦 Applying Kubernetes deployments..."
-kubectl apply -f deployments.yaml
+          
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
 
-echo "🔧 Applying Kubernetes services..."
-kubectl apply -f services.yaml
+---
 
-# === CHAOS MESH ===
-echo ""
-echo "🌪️ Creating Chaos Mesh namespace..."
-kubectl create ns $CHAOS_NS --dry-run=client -o yaml | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node5
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node5 } }
+  template:
+    metadata: { labels: { app: node5 } }
+    spec:
+      containers:
+        - name: node5
+          image: ivancedo/tcp-node-main:latest 
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: SELF_NAME, value: "node5" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node9:5000,node6:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node10:node9:5000,node1:node2:5000,node4:node2:5000,node3:node6:5000,node7:node9:5000,node8:node6:5000" }
 
-echo "📥 Adding Chaos Mesh Helm repo..."
-helm repo add chaos-mesh https://charts.chaos-mesh.org >/dev/null 2>&1 || true
-helm repo update >/dev/null 2>&1
 
-echo "⚙️ Installing Chaos Mesh..."
-helm upgrade --install chaos-mesh chaos-mesh/chaos-mesh -n $CHAOS_NS \
-  --set dashboard.securityMode=false >/dev/null 2>&1 || true
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
 
-echo ""
-echo "🌀 Loading Chaos Mesh pods... (this may take a few minutes)"
-spinner="/|\\-/|\\-"
-i=0
-while true; do
-  total=$(kubectl -n $CHAOS_NS get pods --no-headers 2>/dev/null | wc -l || true)
-  ready=$(kubectl -n $CHAOS_NS get pods --no-headers 2>/dev/null | grep -c "Running" || true)
-  if [ "$total" -gt 0 ] && [ "$ready" -eq "$total" ]; then
-    echo -ne "\r✅ All pods are ready! ($ready/$total)                     \n"
-    break
-  fi
-  i=$(( (i+1) %8 ))
-  printf "\r${spinner:$i:1} Loading... Pods ready: $ready/$total"
-  sleep 3
-done
+---
 
-# === DASHBOARD SERVICEACCOUNT ===
-echo ""
-echo "🧑‍💻 Creating ServiceAccount for Chaos Mesh dashboard..."
-kubectl apply -f chaos-dashboard-admin.yaml >/dev/null 2>&1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node6
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node6 } }
+  template:
+    metadata: { labels: { app: node6 } }
+    spec:
+      containers:
+        - name: node6
+          image: ivancedo/tcp-node-main:latest 
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: SELF_NAME, value: "node6" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node3:5000,node5:5000,node7:5000,node8:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node9:node5:5000,node10:node2:5000,node1:node2:5000,node4:node3:5000" }
 
-# === WAIT FOR DASHBOARD ===
-echo ""
-echo "⏳ Waiting for Chaos Mesh dashboard pod to initialize..."
-while ! kubectl -n $CHAOS_NS get pods -l app.kubernetes.io/component=chaos-dashboard 2>/dev/null | grep -q "Running"; do
-  printf "\r⏳ Loading dashboard..."
-  sleep 2
-done
-echo -e "\r✅ Dashboard pod is running!                         "
 
-# === GET TOKEN ===
-echo ""
-echo "🔑 Retrieving dashboard access token..."
-TOKEN=$(kubectl -n $CHAOS_NS create token chaos-dashboard-admin 2>/dev/null || echo "TokenError")
-if [[ "$TOKEN" != "TokenError" ]]; then
-  echo "✅ Token generated successfully!"
-  echo "🔓 Your access token:"
-  echo ""
-  echo "$TOKEN"
-  echo ""
-else
-  echo "⚠️ Could not retrieve token automatically. Try manually:"
-  echo "kubectl -n $CHAOS_NS create token chaos-dashboard-admin"
-fi
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
 
-# === OPEN DASHBOARD ===
-echo ""
-echo "🌐 Opening Chaos Mesh Dashboard..."
-POD_NAME=$(kubectl -n $CHAOS_NS get pod -l app.kubernetes.io/component=chaos-dashboard -o jsonpath="{.items[0].metadata.name}")
-kubectl -n $CHAOS_NS port-forward "$POD_NAME" $DASHBOARD_PORT:2333 >/dev/null 2>&1 &
-sleep 5
-xdg-open "http://localhost:$DASHBOARD_PORT" >/dev/null 2>&1 || echo "👉 Open manually: http://localhost:$DASHBOARD_PORT"
+---
 
-# === STATUS ===
-echo ""
-echo "📊 Showing current cluster status:"
-kubectl get pods -A
-echo ""
-echo "🎉 Lab environment is ready and Chaos Mesh dashboard is running!"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node7
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node7 } }
+  template:
+    metadata: { labels: { app: node7 } }
+    spec:
+      containers:
+        - name: node7
+          image: ivancedo/tcp-node-main:latest 
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: SELF_NAME, value: "node7" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node6:5000,node8:5000,node9:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node9:5000,node10:node9:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node8
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node8 } }
+  template:
+    metadata: { labels: { app: node8 } }
+    spec:
+      containers:
+        - name: node8
+          image: ivancedo/tcp-node-main:latest 
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: SELF_NAME, value: "node8" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node7:5000,node6:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node9
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node9 } }
+  template:
+    metadata: { labels: { app: node9 } }
+    spec:
+      containers:
+        - name: node9
+          image: ivancedo/tcp-node-main:latest 
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: SELF_NAME, value: "node9" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node10:5000,node5:5000,node7:5000" }
+            - { name: DESTINOS, value: "node4" }
+            - { name: ROUTES, value: "node1:node10:5000,node2:node5:5000,node3:node5:5000,node4:node5:5000,node6:node7:5000,node8:node7:5000" }
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node10
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node10 } }
+  template:
+    metadata: { labels: { app: node10 } }
+    spec:
+      containers:
+        - name: node10
+          image: ivancedo/tcp-node-main:latest 
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: SELF_NAME, value: "node10" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node9:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node1:node2:5000,node4:node2:5000,node3:node2:5000,node5:node9:5000,node6:node2:5000,node7:node9:5000,node8:node9:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
