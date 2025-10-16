@@ -1,6 +1,9 @@
+# Generates a TCP network following the topology described in: /networking/docs/network_topology.jpg.
+# Uses ivancedo/tcp-network-main image.
+
 services:
   node1:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node1
     environment:
       - PORT=5000
@@ -8,10 +11,10 @@ services:
       - DESTINOS=
       - ROUTES=
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
 
   node2:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node2
     environment:
       - PORT=5000
@@ -19,11 +22,11 @@ services:
       - DESTINOS=
       - ROUTES=node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
   
 
   node3:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node3
     environment:
       - PORT=5000
@@ -31,11 +34,11 @@ services:
       - DESTINOS=
       - ROUTES=node1:node4:5000,node2:node4:5000,node5:node6:5000,node7:node6:5000,node8:node6:5000,node9:node6:5000,node10:node4:5000
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
   
 
   node4:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node4
     environment:
       - PORT=5000
@@ -43,10 +46,10 @@ services:
       - DESTINOS=
       - ROUTES=node1:node2:5000,node5:node2:5000,node6:node3:5000,node7:node3:5000,node8:node3:5000,node9:node3:5000,node10:node2:5000
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
 
   node5:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node5
     environment:
       - PORT=5000
@@ -54,12 +57,11 @@ services:
       - DESTINOS=
       - ROUTES=node10:node9:5000,node1:node2:5000,node4:node2:5000,node3:node6:5000,node7:node9:5000,node8:node6:5000
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
 
-  
 
   node6:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node6
     environment:
       - PORT=5000
@@ -67,10 +69,10 @@ services:
       - DESTINOS=
       - ROUTES=node9:node5:5000,node10:node2:5000,node1:node2:5000,node4:node3:5000
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
 
   node7:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node7
     environment:
       - PORT=5000
@@ -78,10 +80,10 @@ services:
       - DESTINOS=
       - ROUTES=node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node9:5000,node10:node9:5000
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
 
   node8:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node8
     environment:
       - PORT=5000
@@ -89,10 +91,10 @@ services:
       - DESTINOS=
       - ROUTES=node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node6:5000,node9:node7:5000,node10:node7:5000
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
 
   node9:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node9
     environment:
       - PORT=5000
@@ -100,10 +102,10 @@ services:
       - DESTINOS=node4
       - ROUTES=node1:node10:5000,node2:node5:5000,node3:node5:5000,node4:node5:5000,node6:node7:5000,node8:node7:5000
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
   
   node10:
-    build: .
+    image: ivancedo/tcp-node-main
     hostname: node10
     environment:
       - PORT=5000
@@ -111,5 +113,5 @@ services:
       - DESTINOS=
       - ROUTES=node1:node2:5000,node4:node2:5000,node3:node2:5000,node5:node9:5000,node6:node2:5000,node7:node9:5000,node8:node9:5000
     volumes:
-      - ./app.py:/app/app.py
+        - ../app:/app
   
