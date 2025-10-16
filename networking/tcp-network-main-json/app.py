@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Network Node Module — versión mejorada con logs JSON
-----------------------------------------------------
-- Cada nodo imprime logs estructurados en formato JSON.
-- Incluye origen, destino, ruta seguida, fallos de reenvío y rutas actualizadas.
-- Compatible con Docker logs o Docker Desktop.
-"""
-
 import os
 import json
 import time
@@ -161,43 +151,52 @@ class Node:
         dest = msg["destination"]
         msg["last_hop"] = self.hostname
 
+        msg_to_send = msg.copy()
+        msg_to_send.pop("last_hop", None)
+
         # 1️. Intentar directo
         for peer in self.peers:
             if dest == peer.name:
-                if self._send_to_peer(peer, msg, "direct_send"):
+                if self._send_to_peer(peer, msg_to_send, "direct_send"):
                     return
 
         # 2️. Por tabla
         if dest in self.routes:
             next_hop = self.routes[dest].next_hop
-            if next_hop.name != exclude_host and self._send_to_peer(next_hop, msg, "route_forward"):
+            if next_hop.name != exclude_host and self._send_to_peer(next_hop, msg_to_send, "route_forward"):
                 return
 
         # 3️. Alternativa
-        self._handle_reroute(msg, exclude_host, dest)
+        self._handle_reroute(msg_to_send, exclude_host, dest)
 
     def _send_to_peer(self, peer: Peer, msg: dict, event: str) -> bool:
         try:
+            msg_to_send = msg.copy()
+            msg_to_send.pop("last_hop", None)
+
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.settimeout(SOCKET_TIMEOUT)
                 sock.connect((peer.name, peer.port))
                 sock.sendall(json.dumps(msg).encode())
-            log_json("INFO", event, f"Mensaje enviado a {peer.name}:{peer.port}", msg)
+            log_json("INFO", event, f"Mensaje enviado a {peer.name}:{peer.port}", msg_to_send)
             return True
         except Exception as e:
-            log_json("WARNING", "send_failed", f"No se pudo enviar a {peer.name}:{peer.port} - {e}", msg)
+            log_json("WARNING", "send_failed", f"No se pudo enviar a {peer.name}:{peer.port} - {e}", msg_to_send)
             return False
 
     def _handle_reroute(self, msg: dict, exclude_host: Optional[str], dest: str):
+        msg_to_send = msg.copy()
+        msg_to_send.pop("last_hop", None)
+
         for peer in self.peers:
             if peer.name == exclude_host:
                 continue
             if self._send_to_peer(peer, msg, "reroute_success"):
                 self.routes[dest] = Route(destination=dest, next_hop=peer)
-                log_json("INFO", "routing_update", f"Ruta hacia {dest} actualizada vía {peer.name}", msg)
+                log_json("INFO", "routing_update", f"Ruta hacia {dest} actualizada vía {peer.name}", msg_to_send)
                 return
         msg["status"] = "FAILED"
-        log_json("ERROR", "no_route_available", f"No fue posible reenviar mensaje hacia {dest}", msg)
+        log_json("ERROR", "no_route_available", f"No fue posible reenviar mensaje hacia {dest}", msg_to_send)
 
 
 # ==================== MAIN ====================
@@ -216,3 +215,4 @@ def main():
 if __name__ == "__main__":
     main()
 
+    
