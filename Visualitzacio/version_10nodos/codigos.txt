@@ -55,7 +55,7 @@ Type: Instant
 
 label_replace(
   label_replace(
-    rate(mensajes_por_conexion[30s]),
+    latencia_conexion_ms,
     "source", "$1", "source", "(node[0-9]+)"
   ),
   "target", "$1", "target", "(node[0-9]+)"
@@ -68,20 +68,4 @@ Transformations
 
 - labels to fields
 - merge series/tables
-- organize fields by name (solo visible id, source, target, valueB)
-
-Fields override
-
-Fields with name: id
-└─ Color scheme: From thresholds
-└─ Thresholds:
-    Base: Red (nodo caído)
-    0.5: Orange (transición)
-    1: Green (nodo activo)
-    
-Fields with name: Value
-└─ Color scheme: From thresholds
-└─ Thresholds:
-    Base: Red (conexión caída = 0)
-    0.001: Gray (conexión sin tráfico)
-    0.5: Green (conexión con tráfico = 1)
+- organize fields by name (solo visible id, source, target, valueC)

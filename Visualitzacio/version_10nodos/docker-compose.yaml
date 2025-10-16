@@ -15,6 +15,8 @@ services:
       - ROUTES=
     volumes:
       - ./app.py:/app/app.py
+    networks:
+      - red_p2p
 
   node2:
     build: .
@@ -27,7 +29,8 @@ services:
       - ROUTES=node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000
     volumes:
       - ./app.py:/app/app.py
-  
+    networks:
+      - red_p2p
 
   node3:
     build: .
@@ -40,7 +43,8 @@ services:
       - ROUTES=
     volumes:
       - ./app.py:/app/app.py
-  
+    networks:
+      - red_p2p
 
   node4:
     build: .
@@ -53,6 +57,8 @@ services:
       - ROUTES=
     volumes:
       - ./app.py:/app/app.py
+    networks:
+      - red_p2p
 
   node5:
     build: .
@@ -65,8 +71,8 @@ services:
       - ROUTES=node10:node9:5000,node1:node2:5000,node4:node2:5000,node3:node6:5000,node7:node9:5000,node8:node6:5000
     volumes:
       - ./app.py:/app/app.py
-
-  
+    networks:
+      - red_p2p  
 
   node6:
     build: .
@@ -79,6 +85,8 @@ services:
       - ROUTES=node9:node5:5000,node10:node2:5000,node1:node2:5000,node4:node3:5000
     volumes:
       - ./app.py:/app/app.py
+    networks:
+      - red_p2p
 
   node7:
     build: .
@@ -91,6 +99,8 @@ services:
       - ROUTES=node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node9:5000,node10:node9:5000
     volumes:
       - ./app.py:/app/app.py
+    networks:
+      - red_p2p
 
   node8:
     build: .
@@ -103,6 +113,8 @@ services:
       - ROUTES=
     volumes:
       - ./app.py:/app/app.py
+    networks:
+      - red_p2p
 
   node9:
     build: .
@@ -115,6 +127,8 @@ services:
       - ROUTES=node1:node10:5000,node2:node5:5000,node3:node5:5000,node4:node5:5000,node6:node7:5000,node8:node7:5000
     volumes:
       - ./app.py:/app/app.py
+    networks:
+      - red_p2p
   
   node10:
     build: .
@@ -127,6 +141,8 @@ services:
       - ROUTES=
     volumes:
       - ./app.py:/app/app.py
+    networks:
+      - red_p2p
 
   prometheus:
     image: prom/prometheus:latest
@@ -141,15 +157,24 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=1y'
       - '--web.enable-lifecycle'
+    networks:
+      - red_p2p
 
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
+    environment:
+      - GF_INSTALL_PLUGINS=agenty-flowcharting-panel
+      - GF_PANELS_ENABLE_ALPHA=true
+      - GF_PANELS_DISABLE_SANITIZE_HTML=true
+      - GF_FEATURE_TOGGLES_ENABLE=customJS,customPanels,customVisualitzation
     volumes:
-    - grafana-data:/var/lib/grafana #MONTA EL VOLUMEN CREADO ANTES EN LA RUTA DONDE GRAFANA GUARDA SU INFO
-   
-  
+      - grafana-data:/var/lib/grafana #MONTA EL VOLUMEN CREADO ANTES EN LA RUTA DONDE GRAFANA GUARDA SU INFO
+    networks:
+      - red_p2p
 
-
+networks:
+  red_p2p:
+    driver: bridge

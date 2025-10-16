@@ -7,11 +7,10 @@ WORKDIR /app
 # COPY app/requirements.txt /app/requirements.txt
 # RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# IMPORTANTE, ESTO ESTA PENSADO PARA TENER TODOS LOS ARCHIVOS .PY .YAML EN EL MISMO DIRECTORIO
-
-COPY app.py .   
+COPY app/ /app 
+# yo tengo la app.py dentro de una carpeta app, dentro de la carpeta del proyecto
 EXPOSE 5000
-CMD ["python", "-u", "/app.py"]
+CMD ["python", "-u", "/app/app.py"]
 
 
 
