@@ -144,7 +144,7 @@ def forward_message(msg, exclude_host=None):
         if dest == peer["name"]:
             success, latency = send_with_latency(peer, msg)
             if success:
-                print(f"[{socket.gethostname()}] ➡️  Envío directo a {dest} (latencia: {latency:.2f}ms)", flush=True)
+                print(f"[{socket.gethostname()}] Envío directo a {dest} (latencia: {latency:.2f}ms)", flush=True)
                 mensajes_totales.labels(destino=dest).inc()
                 mensajes_en_conexion.labels(
                     source=socket.gethostname(),
