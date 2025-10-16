@@ -167,7 +167,7 @@ class Node:
                 return
 
         # 3️. Alternativa
-        self._handle_reroute(msg_to_send, exclude_host, dest)
+        self._handle_reroute(msg_to_send, exclude_host, dest, next_hop.name)
 
     def _send_to_peer(self, peer: Peer, msg: dict, event: str) -> bool:
         try:
@@ -184,12 +184,14 @@ class Node:
             log_json("WARNING", "send_failed", f"No se pudo enviar a {peer.name}:{peer.port} - {e}", msg_to_send)
             return False
 
-    def _handle_reroute(self, msg: dict, exclude_host: Optional[str], dest: str):
+    def _handle_reroute(self, msg: dict, exclude_host: Optional[str], dest: str, prev_failed):
         msg_to_send = msg.copy()
         msg_to_send.pop("last_hop", None)
 
         for peer in self.peers:
             if peer.name == exclude_host:
+                continue
+            if peer.name == prev_failed:
                 continue
             if self._send_to_peer(peer, msg, "reroute_success"):
                 self.routes[dest] = Route(destination=dest, next_hop=peer)
