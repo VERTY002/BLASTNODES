@@ -67,8 +67,8 @@ def log_json(level: str, event: str, message: str, msg_obj: Optional[dict] = Non
     entry = {
         "timestamp": datetime.now(UTC).isoformat(),
         "level": level,
-        "node": socket.gethostname(),
         "event": event,
+        "node": socket.gethostname(),
         "message": message,
     }
     if msg_obj:
@@ -95,7 +95,7 @@ class Node:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
             s.listen()
-            log_json("INFO", "server_start", f"Servidor escuchando en {self.host}:{self.port}")
+            log_json("INFO", "server_started", f"Server started at {self.host}:{self.port}")
             while True:
                 conn, _ = s.accept()
                 threading.Thread(target=self._handle_connection, args=(conn,), daemon=True).start()
@@ -115,17 +115,18 @@ class Node:
 
                 if destination == self.hostname:
                     msg["status"] = "DELIVERED"
-                    log_json("INFO", "message_received", f"Mensaje entregado a {self.hostname}", msg)
+                    log_json("INFO", "message_delivered", f"Message delivered to {self.hostname} from {msg.get('source')}", msg)
                 else:
-                    log_json("INFO", "message_forward", f"Reenviando mensaje hacia {destination}", msg)
+                    log_json("INFO", "message_forwarded", f"Message forwarded from {self.hostname} to {destination}", msg)
                     self.forward_message(msg, exclude_host=msg.get("last_hop"))
 
             except Exception as e:
-                log_json("ERROR", "message_processing_error", f"Error procesando mensaje: {e}")
+                log_json("ERROR", "message_processing_error", f"Unable to process received message: {e}")
 
     # ----------- CLIENTE -----------
 
     def start_client(self):
+        log_json("INFO", "client_started", f"Client started at {self.host}:{self.port}")
         while True:
             if not self.destinations:
                 time.sleep(1)
@@ -138,10 +139,10 @@ class Node:
                     "source": self.hostname,
                     "destination": dest,
                     "payload": f"Hola desde {self.hostname} a {dest}",
-                    "route": [self.hostname],
-                    "status": "IN_PROGRESS"
+                    "status": "IN_PROGRESS",
+                    "route": [self.hostname]
                 }
-                log_json("MSG", "message_send", f"Enviando mensaje a {dest}", msg)
+                log_json("MSG", "message_sent", f"Message sent from {self.hostname} to {dest}", msg)
                 self.forward_message(msg)
             time.sleep(MESSAGE_INTERVAL)
 
@@ -157,19 +158,19 @@ class Node:
         # 1️. Intentar directo
         for peer in self.peers:
             if dest == peer.name:
-                if self._send_to_peer(peer, msg_to_send, "direct_send"):
+                if self._send_to_peer(peer, msg_to_send, "message_forwarded", f"Message forwarded from {self.hostname} to {dest}"):
                     return
 
         # 2️. Por tabla
         if dest in self.routes:
             next_hop = self.routes[dest].next_hop
-            if next_hop.name != exclude_host and self._send_to_peer(next_hop, msg_to_send, "route_forward"):
+            if next_hop.name != exclude_host and self._send_to_peer(next_hop, msg_to_send, "message_rerouted", f"Message rerouted via {next_hop.name}"):
                 return
 
         # 3️. Alternativa
         self._handle_reroute(msg_to_send, exclude_host, dest, next_hop.name)
 
-    def _send_to_peer(self, peer: Peer, msg: dict, event: str) -> bool:
+    def _send_to_peer(self, peer: Peer, msg: dict, event: str, log_message: str) -> bool:
         try:
             msg_to_send = msg.copy()
             msg_to_send.pop("last_hop", None)
@@ -178,10 +179,10 @@ class Node:
                 sock.settimeout(SOCKET_TIMEOUT)
                 sock.connect((peer.name, peer.port))
                 sock.sendall(json.dumps(msg).encode())
-            log_json("INFO", event, f"Mensaje enviado a {peer.name}:{peer.port}", msg_to_send)
+            log_json("INFO", event, log_message, msg_to_send)
             return True
         except Exception as e:
-            log_json("WARNING", "send_failed", f"No se pudo enviar a {peer.name}:{peer.port} - {e}", msg_to_send)
+            log_json("WARNING", "send_failed", f"Unable to send the message from {self.hostname} to {peer.name}:{peer.port}", msg_to_send)
             return False
 
     def _handle_reroute(self, msg: dict, exclude_host: Optional[str], dest: str, prev_failed):
@@ -193,12 +194,11 @@ class Node:
                 continue
             if peer.name == prev_failed:
                 continue
-            if self._send_to_peer(peer, msg, "reroute_success"):
+            if self._send_to_peer(peer, msg, "route_updated", f"Route from {self.hostname} to {dest} updated via {peer.name}"):
                 self.routes[dest] = Route(destination=dest, next_hop=peer)
-                log_json("INFO", "routing_update", f"Ruta hacia {dest} actualizada vía {peer.name}", msg_to_send)
                 return
         msg["status"] = "FAILED"
-        log_json("ERROR", "no_route_available", f"No fue posible reenviar mensaje hacia {dest}", msg_to_send)
+        log_json("ERROR", "no_route_available", f"No route available from {self.hostname} to {dest}", msg_to_send)
 
 
 # ==================== MAIN ====================

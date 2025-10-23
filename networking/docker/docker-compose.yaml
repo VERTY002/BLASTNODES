@@ -1,7 +1,6 @@
-version: "3.9"
 services:
   node1:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node1
     environment:
       - PORT=5000
@@ -9,10 +8,10 @@ services:
       - DESTINOS=
       - ROUTES=node3:node2:5000,node4:node2:5000,node5:node2:5000,node6:node2:5000,node7:node2:5000,node8:node2:5000,node9:node2:5000,node10:node2:5000
     volumes:
-      - ./app.py:/app/app.py
+      - ../app/app.py:/app/app.py
 
   node2:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node2
     environment:
       - PORT=5000
@@ -20,11 +19,10 @@ services:
       - DESTINOS=
       - ROUTES=node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000
     volumes:
-      - ./app.py:/app/app.py
+      - ../app/app.py:/app/app.py
   
-
   node3:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node3
     environment:
       - PORT=5000
@@ -32,11 +30,10 @@ services:
       - DESTINOS=
       - ROUTES=node1:node4:5000,node2:node4:5000,node5:node6:5000,node7:node6:5000,node8:node6:5000,node9:node6:5000,node10:node4:5000
     volumes:
-      - ./app.py:/app/app.py
+      - ../app/app.py:/app/app.py
   
-
   node4:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node4
     environment:
       - PORT=5000
@@ -44,10 +41,10 @@ services:
       - DESTINOS=
       - ROUTES=node1:node2:5000,node5:node2:5000,node6:node3:5000,node7:node3:5000,node8:node3:5000,node9:node3:5000,node10:node2:5000
     volumes:
-      - ./app.py:/app/app.py
+      - ../app/app.py:/app/app.py
 
   node5:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node5
     environment:
       - PORT=5000
@@ -55,12 +52,10 @@ services:
       - DESTINOS=
       - ROUTES=node10:node9:5000,node1:node2:5000,node4:node2:5000,node3:node6:5000,node7:node9:5000,node8:node6:5000
     volumes:
-      - ./app.py:/app/app.py
-
-  
+      - ../app/app.py:/app/app.py
 
   node6:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node6
     environment:
       - PORT=5000
@@ -68,10 +63,10 @@ services:
       - DESTINOS=
       - ROUTES=node9:node5:5000,node10:node2:5000,node1:node2:5000,node4:node3:5000
     volumes:
-      - ./app.py:/app/app.py
+      - ../app/app.py:/app/app.py
 
   node7:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node7
     environment:
       - PORT=5000
@@ -79,10 +74,10 @@ services:
       - DESTINOS=
       - ROUTES=node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node9:5000,node10:node9:5000
     volumes:
-      - ./app.py:/app/app.py
+      - ../app/app.py:/app/app.py
 
   node8:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node8
     environment:
       - PORT=5000
@@ -90,10 +85,10 @@ services:
       - DESTINOS=
       - ROUTES=node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node6:5000,node9:node7:5000,node10:node7:5000
     volumes:
-      - ./app.py:/app/app.py
+      - ../app/app.py:/app/app.py
 
   node9:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node9
     environment:
       - PORT=5000
@@ -101,10 +96,10 @@ services:
       - DESTINOS=node4
       - ROUTES=node1:node10:5000,node2:node5:5000,node3:node5:5000,node4:node5:5000,node6:node7:5000,node8:node7:5000
     volumes:
-      - ./app.py:/app/app.py
+      - ../app/app.py:/app/app.py
   
   node10:
-    image: app_pae
+    image: ivancedo/tcp-node-main:latest
     hostname: node10
     environment:
       - PORT=5000
@@ -112,5 +107,4 @@ services:
       - DESTINOS=
       - ROUTES=node1:node2:5000,node4:node2:5000,node3:node2:5000,node5:node9:5000,node6:node2:5000,node7:node9:5000,node8:node9:5000
     volumes:
-      - ./app.py:/app/app.py
-  
+      - ../app/app.py:/app/app.py
