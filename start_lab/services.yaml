@@ -1,0 +1,216 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: node1
+spec:
+  selector: { app: node1 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node2
+spec:
+  selector: { app: node2 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node3
+spec:
+  selector: { app: node3 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node4
+spec:
+  selector: { app: node4 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node5
+spec:
+  selector: { app: node5 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node6
+spec:
+  selector: { app: node6 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node7
+spec:
+  selector: { app: node7 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node8
+spec:
+  selector: { app: node8 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node9
+spec:
+  selector: { app: node9 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node10
+spec:
+  selector: { app: node10 }
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
+      nodePort: 32001
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  selector:
+    app: grafana
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 32000
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cadvisor
+  namespace: monitoring
+spec:
+  selector:
+    app: cadvisor
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 32002
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+spec:
+  selector:
+    app: blackbox-exporter
+  ports:
+    - protocol: TCP
+      port: 9115
+      targetPort: 9115
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-exporter-svc
+  namespace: monitoring
+  labels:
+    app: node-exporter
+spec:
+  selector:
+    app: node-exporter
+  ports:
+  - name: metrics
+    port: 9100
+    targetPort: 9100
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics-svc
+  namespace: monitoring
+spec:
+  selector:
+    app: kube-state-metrics
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: 8080
