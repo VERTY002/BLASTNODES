@@ -48,7 +48,7 @@ Esperamos otra vez a que se despliegue todo
 1- Vamos a localhost:3000
 2- Nos pedira usuario y contraseña, usuario es admin, para obtener la contraseña copiamos lo que obtenemos con el siguiente comando:
 - kubectl get secret monitoring-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode; echo
-3 - Nos dirigimos a Dashboards -> New Dashboard -> import -> Copiamos el contenido del fichero nodegraph.json -> Load
+3 - Nos dirigimos a Dashboards -> New Dashboard -> import -> Copiamos el contenido del fichero nodegraph.json dentro de la carpeta grafana -> Load
 
 ########## Para acceder a Chaos-mesh #########
 1- Vamos a localhost:2333
