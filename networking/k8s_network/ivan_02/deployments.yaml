@@ -1,72 +1,26 @@
 apiVersion: apps/v1
-kind: Deployment # Clase de objeto: un controlador que asegura N réplicas de un Pod.
+kind: Deployment
 metadata:
-  name: node1 # Nombre del Deployment (y base del ReplicaSet que creará).
+  name: node1
 spec:
-  replicas: 1 # Nº de Pods deseados. Aquí 1 para identidad estable por Service.
-  selector: { matchLabels: { app: node1 } } # Cómo identifica el Deployment qué Pods le pertenecen . app:node 1 # -> Debe coincidir EXACTAMENTE con template.metadata.labels.
-  template:  # Plantilla del Pod que gestionará este Deployment.
+  replicas: 1
+  selector: { matchLabels: { app: node1 } }
+  template:
     metadata: { labels: { app: node1 } }
     spec:
-      containers: # Lista de contenedores dentro del Pod.
-        - name: node1 # Nombre lógico del contenedor (visible en logs, etc.).
-          image: verty002/blast-nodes:v5 # Imagen del contenedor (cámbiala por la tuya subida al registry).
-          imagePullPolicy: IfNotPresent # Tira de la imagen sólo si no existe en el nodo (evita pulls cada vez).
-          ports: [{ containerPort: 5000 }] # Puerto que tu proceso escucha dentro del contenedor (informativo para K8s/NPs).
+      containers:
+        - name: node1
+          image: verty002/blast-nodes:v5
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
           env:
             - { name: SELF_NAME, value: "node1" }
             - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node2:5000" }
+            - { name: PEERS, value: "10.106.4.50:5000" }
             - { name: DESTINOS, value: "node8" }
-            - { name: ROUTES, value: "" }
-            - { name: CONNECT_TIMEOUT, value: "5" }
-            - { name: CLIENT_INTERVAL, value: "5" }
-            - { name: CLIENT_JITTER, value: "1.0" }
-            - { name: BACKOFF_BASE, value: "1.0" }
-            - { name: BACKOFF_MAX, value: "10.0" }
-            - { name: RETRIES_DIRECT, value: "1" }
-            - { name: RETRIES_ROUTE, value: "1" }
-            - { name: RETRIES_BROAD, value: "0" }
-            - { name: IDLE_SLEEP, value: "1.0" }
-          readinessProbe: # Comprobación de “listo para recibir tráfico”.
-            tcpSocket: { port: 5000 } # K8s hace un TCP connect al 5000 dentro del contenedor.
-            initialDelaySeconds: 3 # Espera 3s tras arrancar antes de la 1ª prueba (deja calentar tu app).
-            periodSeconds: 5 # Repite la comprobación cada 5s.
-          volumeMounts:
-            - name: app-py
-              mountPath: /app/app.py
-              subPath: app.py
-      volumes:
-        - name: app-py
-          configMap:
-            name: app-py
----
-#las --- son para separa los nodos sino pilla el del final el node10          
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: node2
-spec:
-  replicas: 1
-  selector:
-    matchLabels: { app: node2 }
-  template:
-    metadata:
-      labels: { app: node2 }
-    spec:
-      containers:
-        - name: node2
-          image: verty002/blast-nodes:v5
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 5000
-          env:
-            - { name: SELF_NAME, value: "node2" }
-            - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node1:5000,node4:5000,node6:5000,node5:5000,node10:5000" }
-            - { name: DESTINOS, value: "node7" }
-            - { name: ROUTES, value: "node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000" }
-            - { name: CONNECT_TIMEOUT, value: "5" }
+            - { name: ROUTES, value: "node3:10.106.4.50:5000,node4:10.106.4.50:5000,node5:10.106.4.50:5000,node6:10.106.4.50:5000,node7:10.106.4.50:5000,node8:10.106.4.50:5000,node9:10.106.4.50:5000,node10:10.106.4.50:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
             - { name: BACKOFF_BASE, value: "1.0" }
@@ -87,7 +41,51 @@ spec:
         - name: app-py
           configMap:
             name: app-py
+---
 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node2
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node2 } }
+  template:
+    metadata: { labels: { app: node2 } }
+    spec:
+      containers:
+        - name: node2
+          image: verty002/blast-nodes:v5
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: SELF_NAME, value: "node2" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "10.104.224.255:5000,10.96.78.40:5000,10.102.87.147:5000,10.97.227.22:5000,10.105.54.204:5000" }
+            - { name: DESTINOS, value: "node7" }
+            - { name: ROUTES, value: "node3:10.96.78.40:5000,node8:10.102.87.147:5000,node9:10.97.227.22:5000,node7:10.102.87.147:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
+            - { name: CLIENT_INTERVAL, value: "5" }
+            - { name: CLIENT_JITTER, value: "1.0" }
+            - { name: BACKOFF_BASE, value: "1.0" }
+            - { name: BACKOFF_MAX, value: "10.0" }
+            - { name: RETRIES_DIRECT, value: "1" }
+            - { name: RETRIES_ROUTE, value: "1" }
+            - { name: RETRIES_BROAD, value: "0" }
+            - { name: IDLE_SLEEP, value: "1.0" }
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: app-py
+              mountPath: /app/app.py
+              subPath: app.py
+      volumes:
+        - name: app-py
+          configMap:
+            name: app-py
 ---
 
 apiVersion: apps/v1
@@ -108,11 +106,11 @@ spec:
           env:
             - { name: SELF_NAME, value: "node3" }
             - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node4:5000,node6:5000" }
+            - { name: PEERS, value: "10.96.78.40:5000,10.102.87.147:5000" }
             - { name: DESTINOS, value: "" }
-            - { name: ROUTES, value: "" }
-
-            - { name: CONNECT_TIMEOUT, value: "5" }
+            - { name: ROUTES, value: "node1:10.96.78.40:5000,node2:10.96.78.40:5000,node5:10.102.87.147:5000,node7:10.102.87.147:5000,node8:10.102.87.147:5000,node9:10.102.87.147:5000,node10:10.96.78.40:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
             - { name: BACKOFF_BASE, value: "1.0" }
@@ -121,7 +119,6 @@ spec:
             - { name: RETRIES_ROUTE, value: "1" }
             - { name: RETRIES_BROAD, value: "0" }
             - { name: IDLE_SLEEP, value: "1.0" }
-
           readinessProbe:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
@@ -154,11 +151,11 @@ spec:
           env:
             - { name: SELF_NAME, value: "node4" }
             - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node3:5000,node2:5000" }
+            - { name: PEERS, value: "10.99.0.127:5000,10.106.4.50:5000" }
             - { name: DESTINOS, value: "" }
-            - { name: ROUTES, value: "" }
-
-            - { name: CONNECT_TIMEOUT, value: "5" }
+            - { name: ROUTES, value: "node1:10.106.4.50:5000,node5:10.106.4.50:5000,node6:10.99.0.127:5000,node7:10.99.0.127:5000,node8:10.99.0.127:5000,node9:10.99.0.127:5000,node10:10.106.4.50:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
             - { name: BACKOFF_BASE, value: "1.0" }
@@ -167,7 +164,6 @@ spec:
             - { name: RETRIES_ROUTE, value: "1" }
             - { name: RETRIES_BROAD, value: "0" }
             - { name: IDLE_SLEEP, value: "1.0" }
-          
           readinessProbe:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
@@ -200,11 +196,11 @@ spec:
           env:
             - { name: SELF_NAME, value: "node5" }
             - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node2:5000,node9:5000,node6:5000" }
+            - { name: PEERS, value: "10.106.4.50:5000,10.105.254.216:5000,10.102.87.147:5000" }
             - { name: DESTINOS, value: "" }
-            - { name: ROUTES, value: "node10:node9:5000,node1:node2:5000,node4:node2:5000,node3:node6:5000,node7:node9:5000,node8:node6:5000" }
-
-            - { name: CONNECT_TIMEOUT, value: "5" }
+            - { name: ROUTES, value: "node10:10.105.254.216:5000,node1:10.106.4.50:5000,node4:10.106.4.50:5000,node3:10.102.87.147:5000,node7:10.105.254.216:5000,node8:10.102.87.147:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
             - { name: BACKOFF_BASE, value: "1.0" }
@@ -213,7 +209,6 @@ spec:
             - { name: RETRIES_ROUTE, value: "1" }
             - { name: RETRIES_BROAD, value: "0" }
             - { name: IDLE_SLEEP, value: "1.0" }
-
           readinessProbe:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
@@ -246,11 +241,11 @@ spec:
           env:
             - { name: SELF_NAME, value: "node6" }
             - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node2:5000,node3:5000,node5:5000,node7:5000,node8:5000" }
+            - { name: PEERS, value: "10.106.4.50:5000,10.99.0.127:5000,10.97.227.22:5000,10.111.212.197:5000,10.107.219.74:5000" }
             - { name: DESTINOS, value: "" }
-            - { name: ROUTES, value: "node9:node5:5000,node10:node2:5000,node1:node2:5000,node4:node3:5000" }
-
-            - { name: CONNECT_TIMEOUT, value: "5" }
+            - { name: ROUTES, value: "node9:10.97.227.22:5000,node10:10.106.4.50:5000,node1:10.106.4.50:5000,node4:10.99.0.127:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
             - { name: BACKOFF_BASE, value: "1.0" }
@@ -259,7 +254,6 @@ spec:
             - { name: RETRIES_ROUTE, value: "1" }
             - { name: RETRIES_BROAD, value: "0" }
             - { name: IDLE_SLEEP, value: "1.0" }
-
           readinessProbe:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
@@ -292,11 +286,11 @@ spec:
           env:
             - { name: SELF_NAME, value: "node7" }
             - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node6:5000,node8:5000,node9:5000" }
+            - { name: PEERS, value: "10.102.87.147:5000,10.107.219.74:5000,10.105.254.216:5000" }
             - { name: DESTINOS, value: "" }
-            - { name: ROUTES, value: "node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node9:5000,node10:node9:5000" }
-
-            - { name: CONNECT_TIMEOUT, value: "5" }
+            - { name: ROUTES, value: "node1:10.102.87.147:5000,node2:10.102.87.147:5000,node3:10.102.87.147:5000,node4:10.102.87.147:5000,node5:10.105.254.216:5000,node10:10.105.254.216:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
             - { name: BACKOFF_BASE, value: "1.0" }
@@ -305,7 +299,6 @@ spec:
             - { name: RETRIES_ROUTE, value: "1" }
             - { name: RETRIES_BROAD, value: "0" }
             - { name: IDLE_SLEEP, value: "1.0" }
-
           readinessProbe:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
@@ -338,11 +331,11 @@ spec:
           env:
             - { name: SELF_NAME, value: "node8" }
             - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node7:5000,node6:5000" }
+            - { name: PEERS, value: "10.111.212.197:5000,10.102.87.147:5000" }
             - { name: DESTINOS, value: "" }
-            - { name: ROUTES, value: "" }
-
-            - { name: CONNECT_TIMEOUT, value: "5" }
+            - { name: ROUTES, value: "node1:10.102.87.147:5000,node2:10.102.87.147:5000,node3:10.102.87.147:5000,node4:10.102.87.147:5000,node5:10.102.87.147:5000,node9:10.111.212.197:5000,node10:10.111.212.197:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
             - { name: BACKOFF_BASE, value: "1.0" }
@@ -351,7 +344,6 @@ spec:
             - { name: RETRIES_ROUTE, value: "1" }
             - { name: RETRIES_BROAD, value: "0" }
             - { name: IDLE_SLEEP, value: "1.0" }
-
           readinessProbe:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
@@ -384,11 +376,11 @@ spec:
           env:
             - { name: SELF_NAME, value: "node9" }
             - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node10:5000,node5:5000,node7:5000" }
+            - { name: PEERS, value: "10.105.54.204:5000,10.97.227.22:5000,10.111.212.197:5000" }
             - { name: DESTINOS, value: "node4" }
-            - { name: ROUTES, value: "node1:node10:5000,node2:node5:5000,node3:node5:5000,node4:node5:5000,node6:node7:5000,node8:node7:5000" }
-
-            - { name: CONNECT_TIMEOUT, value: "5" }
+            - { name: ROUTES, value: "node1:10.105.54.204:5000,node2:10.97.227.22:5000,node3:10.97.227.22:5000,node4:10.97.227.22:5000,node6:10.111.212.197:5000,node8:10.111.212.197:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
             - { name: BACKOFF_BASE, value: "1.0" }
@@ -397,7 +389,6 @@ spec:
             - { name: RETRIES_ROUTE, value: "1" }
             - { name: RETRIES_BROAD, value: "0" }
             - { name: IDLE_SLEEP, value: "1.0" }
-
           readinessProbe:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
@@ -430,11 +421,11 @@ spec:
           env:
             - { name: SELF_NAME, value: "node10" }
             - { name: PORT, value: "5000" }
-            - { name: PEERS, value: "node2:5000,node9:5000" }
+            - { name: PEERS, value: "10.106.4.50:5000,10.105.254.216:5000" }
             - { name: DESTINOS, value: "" }
-            - { name: ROUTES, value: "" }
-
-            - { name: CONNECT_TIMEOUT, value: "5" }
+            - { name: ROUTES, value: "node1:10.106.4.50:5000,node4:10.106.4.50:5000,node3:10.106.4.50:5000,node5:10.105.254.216:5000,node6:10.106.4.50:5000,node7:10.105.254.216:5000,node8:10.105.254.216:5000" }
+            - { name: NODE_MAP, value: "node1:10.104.224.255,node2:10.106.4.50,node3:10.99.0.127,node4:10.96.78.40,node5:10.97.227.22,node6:10.102.87.147,node7:10.111.212.197,node8:10.107.219.74,node9:10.105.254.216,node10:10.105.54.204" }
+            - { name: CONNECT_TIMEOUT, value: "100" }
             - { name: CLIENT_INTERVAL, value: "5" }
             - { name: CLIENT_JITTER, value: "1.0" }
             - { name: BACKOFF_BASE, value: "1.0" }
@@ -443,7 +434,6 @@ spec:
             - { name: RETRIES_ROUTE, value: "1" }
             - { name: RETRIES_BROAD, value: "0" }
             - { name: IDLE_SLEEP, value: "1.0" }
-
           readinessProbe:
             tcpSocket: { port: 5000 }
             initialDelaySeconds: 3
