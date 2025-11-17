@@ -1,10 +1,13 @@
 # Afegir el grafana-values.yaml
+
 (es pq al obrir el grafana no hagis d'iniciar sessio)
+
   helm upgrade monitoring prometheus-community/kube-prometheus-stack \ \
   --namespace monitoring \
   --values grafana-values.yaml
 
   kubectl get configmap monitoring-grafana -n monitoring -o yaml | sed -n 's/^/    /p' | grep -A20 "grafana.ini"
+ 
   resultat:
       grafana.ini: |
         [analytics]
