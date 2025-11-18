@@ -1,0 +1,380 @@
+apiVersion: apps/v1
+kind: Deployment # Clase de objeto: un controlador que asegura N réplicas de un Pod.
+metadata:
+  name: node1 # Nombre del Deployment (y base del ReplicaSet que creará).
+  namespace: nodes 
+spec:
+  replicas: 1 # Nº de Pods deseados. Aquí 1 para identidad estable por Service.
+  selector: { matchLabels: { app: node1 } } # Cómo identifica el Deployment qué Pods le pertenecen . app:node 1 # -> Debe coincidir EXACTAMENTE con template.metadata.labels.
+  template:  # Plantilla del Pod que gestionará este Deployment.
+    metadata: { labels: { app: node1 } }
+    spec:
+      containers: # Lista de contenedores dentro del Pod.
+        - name: node1 # Nombre lógico del contenedor (visible en logs, etc.).
+          image: pauburgos/app_pae:v5 # Imagen del contenedor (cámbiala por la tuya subida al registry).
+          imagePullPolicy: IfNotPresent # Tira de la imagen sólo si no existe en el nodo (evita pulls cada vez).
+          ports:
+            - containerPort: 5000 # Puerto que tu proceso escucha dentro del contenedor (informativo para K8s/NPs).
+          env:
+            - { name: SELF_NAME, value: "node1" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000" }
+            - { name: DESTINOS, value: "node10"}
+            - { name: ROUTES, value: "node3:node2:5000,node4:node2:5000,node5:node2:5000,node6:node2:5000,node7:node2:5000,node8:node2:5000,node9:node2:5000,node10:node2:5000" }
+
+          readinessProbe: # Comprobación de “listo para recibir tráfico”.
+            tcpSocket: { port: 5000 } # K8s hace un TCP connect al 5000 dentro del contenedor.
+            initialDelaySeconds: 3 # Espera 3s tras arrancar antes de la 1ª prueba (deja calentar tu app).
+            periodSeconds: 5 # Repite la comprobación cada 5s.
+
+---
+#las --- son para separa los nodos sino pilla el del final el node10          
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node2
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: node2 }
+  template:
+    metadata:
+      labels: { app: node2 }
+    spec:
+      
+      containers:
+        - name: node2
+          image: pauburgos/app_pae:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+
+          env:
+            - { name: SELF_NAME, value: "node2" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node1:5000,node4:5000,node6:5000,node5:5000,node10:5000" }
+            - { name: DESTINOS, value: "node9" }
+            - { name: ROUTES, value: "node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000" }
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node3
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node3 } }
+  template:
+    metadata: { labels: { app: node3 } }
+    spec:
+      containers:
+        - name: node3
+          image: pauburgos/app_pae:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+   
+          env:
+            - { name: SELF_NAME, value: "node3" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node4:5000,node6:5000" }
+            - { name: DESTINOS, value: "node8" }
+            - { name: ROUTES, value: "node1:node4:5000,node2:node4:5000,node5:node6:5000,node7:node6:5000,node8:node6:5000,node9:node6:5000,node10:node4:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node4
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node4 } }
+  template:
+    metadata: { labels: { app: node4 } }
+    spec:
+      containers:
+        - name: node4
+          image: pauburgos/app_pae:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+
+          env:
+            - { name: SELF_NAME, value: "node4" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node3:5000,node2:5000" }
+            - { name: DESTINOS, value: "node7" }
+            - { name: ROUTES, value: "node1:node2:5000,node5:node2:5000,node6:node3:5000,node7:node3:5000,node8:node3:5000,node9:node3:5000,node10:node2:5000" }
+
+          
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node5
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node5 } }
+  template:
+    metadata: { labels: { app: node5 } }
+    spec:
+      containers:
+        - name: node5
+          image: pauburgos/app_pae:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+
+          env:
+            - { name: SELF_NAME, value: "node5" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node9:5000,node6:5000" }
+            - { name: DESTINOS, value: "node6" }
+            - { name: ROUTES, value: "node10:node9:5000,node1:node2:5000,node4:node2:5000,node3:node6:5000,node7:node9:5000,node8:node6:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node6
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node6 } }
+  template:
+    metadata: { labels: { app: node6 } }
+    spec:
+      containers:
+        - name: node6
+          image: pauburgos/app_pae:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+
+          env:
+            - { name: SELF_NAME, value: "node6" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node3:5000,node5:5000,node7:5000,node8:5000" }
+            - { name: DESTINOS, value: "node4" }
+            - { name: ROUTES, value: "node9:node5:5000,node10:node2:5000,node1:node2:5000,node4:node3:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node7
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node7 } }
+  template:
+    metadata: { labels: { app: node7 } }
+    spec:
+      containers:
+        - name: node7
+          image: pauburgos/app_pae:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+
+          env:
+            - { name: SELF_NAME, value: "node7" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node6:5000,node8:5000,node9:5000" }
+            - { name: DESTINOS, value: "node4" }
+            - { name: ROUTES, value: "node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node9:5000,node10:node9:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node8
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node8 } }
+  template:
+    metadata: { labels: { app: node8 } }
+    spec:
+      containers:
+        - name: node8
+          image: pauburgos/app_pae:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - { name: SELF_NAME, value: "node8" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node7:5000,node6:5000" }
+            - { name: DESTINOS, value: "node4" }
+            - { name: ROUTES, value: "node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node6:5000,node9:node7:5000,node10:node7:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node9
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node9 } }
+  template:
+    metadata: { labels: { app: node9 } }
+    spec:
+      containers:
+        - name: node9
+          image: pauburgos/app_pae:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - { name: SELF_NAME, value: "node9" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node10:5000,node5:5000,node7:5000" }
+            - { name: DESTINOS, value: "node4" }
+            - { name: ROUTES, value: "node1:node10:5000,node2:node5:5000,node3:node5:5000,node4:node5:5000,node6:node7:5000,node8:node7:5000" }
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node10
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node10 } }
+  template:
+    metadata: { labels: { app: node10 } }
+    spec:
+      containers:
+        - name: node10
+          image: pauburgos/app_pae:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - { name: SELF_NAME, value: "node10" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node9:5000" }
+            - { name: DESTINOS, value: "node4" }
+            - { name: ROUTES, value: "node1:node2:5000,node4:node2:5000,node3:node2:5000,node5:node9:5000,node6:node2:5000,node7:node9:5000,node8:node9:5000" }
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+---
+# Aqui definimos la lista de nodos que queremos monitorizar con su nombre de contenedor, y sus conexiones, es escalable
+# a cualquier contenedor que añadamos mas adelante, base de datos, servidor web etc...
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-graph-exporter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-graph-exporter
+  template:
+    metadata:
+      labels:
+        app: node-graph-exporter
+    spec:
+      containers:
+      - name: exporter
+        image: pauburgos/node-exporter:3.3
+        env:
+        - name: PROM_URL
+          value: "http://prometheus-operated.monitoring.svc:9090"
+        - name: NAMESPACE
+          value: "nodes"
+        - name: NODES
+          value: "node1,node2,node3,node4,node5,node6,node7,node8,node9,node10"
+        - name: NODE1_PEERS
+          value: "node2"
+        - name: NODE2_PEERS
+          value: "node1,node10,node5,node4"
+        - name: NODE3_PEERS
+          value: "node4,node6"
+        - name: NODE4_PEERS
+          value: "node2,node3"
+        - name: NODE5_PEERS
+          value: "node2,node6,node9"
+        - name: NODE6_PEERS
+          value: "node2,node3,node5,node7"
+        - name: NODE7_PEERS
+          value: "node6,node8,node9"
+        - name: NODE8_PEERS
+          value: "node6,node7"
+        - name: NODE9_PEERS
+          value: "node5,node7,node10"
+        - name: NODE10_PEERS
+          value: "node2,node9"
+        ports:
+        - containerPort: 9101
