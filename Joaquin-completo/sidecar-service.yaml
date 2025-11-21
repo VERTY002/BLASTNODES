@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sidecar-exporter
+  namespace: nodes
+  labels:
+    app: sidecar-exporter
+spec:
+  selector:
+    sidecar: "true"
+  ports:
+    - name: metrics
+      port: 9100
+      targetPort: 9100
