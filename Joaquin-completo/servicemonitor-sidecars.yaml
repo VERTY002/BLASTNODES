@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sidecar-exporter-monitor
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: sidecar-exporter
+  namespaceSelector:
+    matchNames:
+      - nodes
+  endpoints:
+    - port: metrics
+      interval: 5s
