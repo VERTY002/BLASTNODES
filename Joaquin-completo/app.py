@@ -9,16 +9,23 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 
+
 # ==================== CONFIGURACIÓN ====================
+LOG_FILE = "/var/log/app.log"
+
+def write_log(line: str):
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(line + "\n")
 
 HOST = "0.0.0.0"
 PORT = int(os.getenv("PORT", "5000"))
-SOCKET_TIMEOUT = 1.0
+SOCKET_TIMEOUT = 60.0
 MESSAGE_INTERVAL = 5
-
+SELF_NAME = os.getenv("SELF_NAME","")
 PEERS_ENV = os.getenv("PEERS", "")
 DESTINOS_ENV = os.getenv("DESTINOS", "")
 ROUTES_ENV = os.getenv("ROUTES", "")
+PAYLOAD_SIZE = 3000 
 
 
 # ==================== MODELOS ====================
@@ -63,19 +70,22 @@ def parse_destinations(env_str: str) -> List[str]:
 # ==================== LOG JSON ====================
 
 def log_json(level: str, event: str, message: str, msg_obj: Optional[dict] = None, extra: Optional[dict] = None):
-    """Imprime logs en formato JSON estructurado."""
     entry = {
         "timestamp": datetime.now(UTC).isoformat(),
         "level": level,
         "event": event,
-        "node": socket.gethostname(),
+        "node": SELF_NAME,
         "message": message,
     }
     if msg_obj:
         entry["data"] = msg_obj
     if extra:
         entry["extra"] = extra
-    print(json.dumps(entry, ensure_ascii=False), flush=True)
+
+    line = json.dumps(entry, ensure_ascii=False)
+    print(line, flush=True)
+    write_log(line)
+
 
 
 # ==================== NODO ====================
@@ -87,7 +97,7 @@ class Node:
         self.peers = peers
         self.routes = routes
         self.destinations = destinations
-        self.hostname = socket.gethostname()
+        self.hostname = SELF_NAME
 
     # ----------- SERVIDOR -----------
 
@@ -115,9 +125,19 @@ class Node:
 
                 if destination == self.hostname:
                     msg["status"] = "DELIVERED"
-                    log_json("INFO", "message_delivered", f"Message delivered to {self.hostname} from {msg.get('source')}", msg)
+                    log_json("INFO", "message_delivered", f"Message delivered to {self.hostname} from {msg.get('source')}",
+                            {
+                                "id": msg["id"],
+                                "payload": msg["payload"]["text"],   # <-- SOLO
+                                "route": msg["route"]
+                            })
                 else:
-                    log_json("INFO", "message_forwarded", f"Message forwarded from {self.hostname} to {destination}", msg)
+                    log_json("INFO", "message_forwarded", f"Message forwarded from {self.hostname} to {destination}",
+                             {
+                                "id": msg["id"],
+                                "payload": msg["payload"]["text"],   # <-- SOLO
+                                "route": msg["route"]
+                            })
                     self.forward_message(msg, exclude_host=msg.get("last_hop"))
 
             except Exception as e:
@@ -127,6 +147,7 @@ class Node:
 
     def start_client(self):
         log_json("INFO", "client_started", f"Client started at {self.host}:{self.port}")
+
         while True:
             if not self.destinations:
                 time.sleep(1)
@@ -138,13 +159,22 @@ class Node:
                     "type": "data",
                     "source": self.hostname,
                     "destination": dest,
-                    "payload": f"Hola desde {self.hostname} a {dest}",
+                    "payload": {
+                        "text": f"Hola desde {self.hostname} a {dest}",
+                        "blob": "B" * 3000
+                    },
                     "status": "IN_PROGRESS",
                     "route": [self.hostname]
                 }
-                log_json("MSG", "message_sent", f"Message sent from {self.hostname} to {dest}", msg)
+
+                log_json("MSG", "message_sent",
+                        f"Message sent from {self.hostname} to {dest}",
+                        msg)
+
                 self.forward_message(msg)
+
             time.sleep(MESSAGE_INTERVAL)
+
 
     # ----------- REENVÍO -----------
 
@@ -175,15 +205,41 @@ class Node:
             msg_to_send = msg.copy()
             msg_to_send.pop("last_hop", None)
 
+            # --- medir tamaño del mensaje enviado ---
+            raw = json.dumps(msg).encode("utf-8")
+            size = len(raw)
+
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.settimeout(SOCKET_TIMEOUT)
                 sock.connect((peer.name, peer.port))
-                sock.sendall(json.dumps(msg).encode())
+                sock.sendall(raw)
+
+            # --- LOG REAL DEL EDGE (ESTE ES EL IMPORTANTE) ---
+            log_json(
+                "INFO",
+                "edge",
+                f"Edge {self.hostname} → {peer.name}",
+                {
+                    "src": self.hostname,
+                    "dst": peer.name,
+                    "bytes": size
+                }
+            )
+
+            # Log clásico para debug
             log_json("INFO", event, log_message, msg_to_send)
+
             return True
+
         except Exception as e:
-            log_json("WARNING", "send_failed", f"Unable to send the message from {self.hostname} to {peer.name}:{peer.port}", msg_to_send)
+            log_json(
+                "WARNING",
+                "send_failed",
+                f"Unable to send from {self.hostname} to {peer.name}:{peer.port}",
+                msg_to_send
+            )
             return False
+
 
     def _handle_reroute(self, msg: dict, exclude_host: Optional[str], dest: str, prev_failed):
         msg_to_send = msg.copy()
