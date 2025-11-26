@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 
-
 # ==================== CONFIGURACIÓN ====================
 LOG_FILE = "/var/log/app.log"
 
@@ -161,7 +160,7 @@ class Node:
                     "destination": dest,
                     "payload": {
                         "text": f"Hola desde {self.hostname} a {dest}",
-                        "blob": "B" * 3000
+                        "blob": "B" * 3000 
                     },
                     "status": "IN_PROGRESS",
                     "route": [self.hostname]
@@ -256,6 +255,37 @@ class Node:
         msg["status"] = "FAILED"
         log_json("ERROR", "no_route_available", f"No route available from {self.hostname} to {dest}", msg_to_send)
 
+    # ----------- AUTO-HEALING (INTELIGENTE) -----------
+
+    def heal_routes_loop(self):
+        while True:
+            time.sleep(30)
+            try:
+                original_routes = parse_routes(ROUTES_ENV)
+                for dest, original_route in original_routes.items():
+                    current_route = self.routes.get(dest)
+
+                    if current_route and current_route.next_hop.name != original_route.next_hop.name:
+                        target_peer = original_route.next_hop
+                        
+                        # USAR LOG_JSON EN LUGAR DE PRINT
+                        log_json("DEBUG", "healing_check", f" Probando ruta original hacia {dest} vía {target_peer.name}...")
+
+                        if self._check_connectivity(target_peer):
+                            log_json("INFO", "route_healed", f"{target_peer.name} ha revivido. Restaurando ruta.")
+                            self.routes[dest] = original_route
+            
+            except Exception as e:
+                log_json("ERROR", "healing_error", f"Error en auto-healing: {e}")
+
+    def _check_connectivity(self, peer: Peer) -> bool:
+        """Intenta abrir un socket al peer. Si conecta, devuelve True."""
+        try:
+            with socket.create_connection((peer.name, peer.port), timeout=2):
+                return True
+        except OSError:
+            return False
+
 
 # ==================== MAIN ====================
 
@@ -264,13 +294,17 @@ def main():
     routes = parse_routes(ROUTES_ENV)
     destinations = parse_destinations(DESTINOS_ENV)
     node = Node(HOST, PORT, peers, routes, destinations)
+    
+    # Iniciar hilos del servidor y cliente
     threading.Thread(target=node.start_server, daemon=True).start()
     threading.Thread(target=node.start_client, daemon=True).start()
+    
+    # Iniciar hilo de auto-reparación de rutas
+    threading.Thread(target=node.heal_routes_loop, daemon=True).start()
+
     while True:
         time.sleep(1)
 
 
 if __name__ == "__main__":
     main()
-
-    
