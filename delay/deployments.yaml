@@ -1,0 +1,601 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node1
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node1 } }
+  template:
+    metadata:
+      labels:  
+        app: node1 
+        sidecar: "true"
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+
+      containers:
+        - name: node1
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+          env:
+            - { name: SELF_NAME, value: "node1" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node3:node2:5000,node4:node2:5000,node5:node2:5000,node6:node2:5000,node7:node2:5000,node8:node2:5000,node9:node2:5000,node10:node2:5000" }
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+---
+
+
+---
+#las --- son para separa los nodos sino pilla el del final el node10          
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node2
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: node2 }
+  template:
+    metadata:
+      labels: 
+        app: node2 
+        sidecar: "true"
+      
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+      
+      containers:
+        - name: node2
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+          env:
+            - { name: SELF_NAME, value: "node2" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node1:5000,node4:5000,node6:5000,node5:5000,node10:5000" }
+            - { name: DESTINOS, value: "node4" }
+            - { name: ROUTES, value: "node3:node4:5000,node8:node6:5000,node9:node5:5000,node7:node6:5000" }
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node3
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node3 } }
+  template:
+    metadata:  
+      labels: 
+        app: node3 
+        sidecar: "true"
+
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+      containers:
+        - name: node3
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+   
+          env:
+            - { name: SELF_NAME, value: "node3" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node4:5000,node6:5000" }
+            - { name: DESTINOS, value: "node7" }
+            - { name: ROUTES, value: "node1:node4:5000,node2:node4:5000,node5:node6:5000,node7:node6:5000,node8:node6:5000,node9:node6:5000,node10:node4:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node4
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node4 } }
+  template:
+    metadata:  
+      labels: 
+        app: node4 
+        sidecar: "true"
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+      containers:
+        - name: node4
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+          env:
+            - { name: SELF_NAME, value: "node4" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node3:5000,node2:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node1:node2:5000,node5:node2:5000,node6:node3:5000,node7:node3:5000,node8:node3:5000,node9:node3:5000,node10:node2:5000" }
+
+          
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node5
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node5 } }
+  template:
+    metadata:  
+      labels: 
+        app: node5 
+        sidecar: "true"
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+      containers:
+        - name: node5
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+          env:
+            - { name: SELF_NAME, value: "node5" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node9:5000,node6:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node10:node9:5000,node1:node2:5000,node4:node2:5000,node3:node6:5000,node7:node9:5000,node8:node6:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node6
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node6 } }
+  template:
+    metadata: 
+      labels:  
+        app: node6 
+        sidecar: "true"
+  
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+      containers:
+        - name: node6
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+          env:
+            - { name: SELF_NAME, value: "node6" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node3:5000,node5:5000,node7:5000,node8:5000" }
+            - { name: DESTINOS, value: "" }
+            - { name: ROUTES, value: "node9:node5:5000,node10:node2:5000,node1:node2:5000,node4:node3:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node7
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node7 } }
+  template:
+    metadata:  
+      labels:  
+        app: node7 
+        sidecar: "true"
+  
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+      containers:
+        - name: node7
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+          env:
+            - { name: SELF_NAME, value: "node7" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node6:5000,node8:5000,node9:5000" }
+            - { name: DESTINOS, value: "node5" }
+            - { name: ROUTES, value: "node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node9:5000,node10:node9:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node8
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node8 } }
+  template:
+    metadata:  
+      labels: 
+        app: node8 
+        sidecar: "true"
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+      containers:
+        - name: node8
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+          env:
+            - { name: SELF_NAME, value: "node8" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node7:5000,node6:5000" }
+            - { name: DESTINOS, value: "node1" }
+            - { name: ROUTES, value: "node1:node6:5000,node2:node6:5000,node3:node6:5000,node4:node6:5000,node5:node6:5000,node9:node7:5000,node10:node7:5000" }
+
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+          
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node9
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node9 } }
+  template:
+    metadata: 
+      labels:  
+        app: node9 
+        sidecar: "true"
+
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+      containers:
+        - name: node9
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+          env:
+            - { name: SELF_NAME, value: "node9" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node10:5000,node5:5000,node7:5000" }
+            - { name: DESTINOS, value: "node4" }
+            - { name: ROUTES, value: "node1:node10:5000,node2:node5:5000,node3:node5:5000,node4:node5:5000,node6:node7:5000,node8:node7:5000" }
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node10
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: node10 } }
+  template:
+    metadata: 
+      labels: 
+        app: node10 
+        sidecar: "true"
+ 
+    spec:
+      volumes:
+        - name: applogs
+          emptyDir: {}
+      containers:
+        - name: node10
+          image: verty002/blast-nodes:v23
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+          env:
+            - { name: SELF_NAME, value: "node10" }
+            - { name: PORT, value: "5000" }
+            - { name: PEERS, value: "node2:5000,node9:5000" }
+            - { name: DESTINOS, value: "node1" }
+            - { name: ROUTES, value: "node1:node2:5000,node4:node2:5000,node3:node2:5000,node5:node9:5000,node6:node2:5000,node7:node9:5000,node8:node9:5000" }
+
+          readinessProbe:
+            tcpSocket: { port: 5000 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        - name: sidecar-exporter
+          image: joaqmas/sidecar-exporter:1.10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9100
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log
+---
+# Aqui definimos la lista de nodos que queremos monitorizar con su nombre de contenedor, y sus conexiones, es escalable
+# a cualquier contenedor que añadamos mas adelante, base de datos, servidor web etc...
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-graph-exporter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-graph-exporter
+  template:
+    metadata:
+      labels:
+        app: node-graph-exporter
+    spec:
+      containers:
+      - name: exporter
+        image:  paucli/node-graph-exporter:v3
+        env:
+        - name: PROM_URL
+          value: "http://prometheus-operated.monitoring.svc:9090"
+        - name: NAMESPACE
+          value: "nodes"
+        - name: NODES
+          value: "node1,node2,node3,node4,node5,node6,node7,node8,node9,node10"
+        - name: TRAFFIC_WINDOW
+          value: "30s"
+        - name: EDGE_LOW_THRESHOLD
+          value: "700"
+        - name: EDGE_MED_THRESHOLD
+          value: "1400"
+        - name: NODE1_PEERS
+          value: "node2"
+        - name: NODE2_PEERS
+          value: "node1,node10,node5,node4"
+        - name: NODE3_PEERS
+          value: "node4,node6"
+        - name: NODE4_PEERS
+          value: "node2,node3"
+        - name: NODE5_PEERS
+          value: "node2,node6,node9"
+        - name: NODE6_PEERS
+          value: "node2,node3,node5,node7"
+        - name: NODE7_PEERS
+          value: "node6,node8,node9"
+        - name: NODE8_PEERS
+          value: "node6,node7"
+        - name: NODE9_PEERS
+          value: "node5,node7,node10"
+        - name: NODE10_PEERS
+          value: "node2,node9"
+        ports:
+        - containerPort: 9101
