@@ -1,0 +1,2 @@
+Es el mismo código que joaquin, simplemente se tiene que cambiar el deployment. Para que funcione el error donde se ve el delay, se tiene que ir al chaos mesh 
+y aplicarlo con "to" donde da la opcion de both from o to. Tambien está arreglado lo de que cambie la topologia todo el rato en el nodegraph subido
