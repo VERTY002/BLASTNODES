@@ -1,4 +1,4 @@
-# Afegir el grafana-values.yaml
+# Afegir el grafana-values.yaml i grafana-dashboard.yaml
 
 (es pq al obrir el grafana no hagis d'iniciar sessio)
 
@@ -6,6 +6,12 @@
   --namespace monitoring \
   --values grafana-values.yaml
 
+  kubectl apply -f grafana-dashboard.yaml
+  kubectl rollout restart deployment/monitoring-grafana -n monitoring
+
+
+  
+  Per mirar que estigui be la part de deshabilitar el login:
   kubectl get configmap monitoring-grafana -n monitoring -o yaml | sed -n 's/^/    /p' | grep -A20 "grafana.ini"
  
   resultat:
