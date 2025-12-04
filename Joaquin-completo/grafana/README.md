@@ -7,6 +7,8 @@
   --values grafana-values.yaml
 
   kubectl apply -f grafana-dashboard.yaml
+  
+  
   kubectl rollout restart deployment/monitoring-grafana -n monitoring
 
 
