@@ -18,7 +18,7 @@ spec:
 
       containers:
         - name: node1
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -74,7 +74,7 @@ spec:
       
       containers:
         - name: node2
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -129,7 +129,7 @@ spec:
           emptyDir: {}
       containers:
         - name: node3
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -183,7 +183,7 @@ spec:
           emptyDir: {}
       containers:
         - name: node4
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -237,7 +237,7 @@ spec:
           emptyDir: {}
       containers:
         - name: node5
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -293,7 +293,7 @@ spec:
           emptyDir: {}
       containers:
         - name: node6
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -348,7 +348,7 @@ spec:
           emptyDir: {}
       containers:
         - name: node7
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -403,7 +403,7 @@ spec:
           emptyDir: {}
       containers:
         - name: node8
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -459,7 +459,7 @@ spec:
           emptyDir: {}
       containers:
         - name: node9
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -513,7 +513,7 @@ spec:
           emptyDir: {}
       containers:
         - name: node10
-          image: joaqmas/app_pae:3.2
+          image: verty002/blast-nodes:v23
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -543,7 +543,35 @@ spec:
           volumeMounts:
             - name: applogs
               mountPath: /var/log
+
+
 ---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: nodes 
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: nginx } }
+  template:
+    metadata: 
+      labels: 
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 80
+---
+
+
 # Aqui definimos la lista de nodos que queremos monitorizar con su nombre de contenedor, y sus conexiones, es escalable
 # a cualquier contenedor que añadamos mas adelante, base de datos, servidor web etc...
 apiVersion: apps/v1
@@ -563,14 +591,14 @@ spec:
     spec:
       containers:
       - name: exporter
-        image: joaqmas/node-exporter:5.2
+        image:  joaqmas/node-exporter:6.3
         env:
         - name: PROM_URL
           value: "http://prometheus-operated.monitoring.svc:9090"
         - name: NAMESPACE
           value: "nodes"
         - name: NODES
-          value: "node1,node2,node3,node4,node5,node6,node7,node8,node9,node10"
+          value: "node1,node2,node3,node4,node5,node6,node7,node8,node9,node10,nginx"
         - name: TRAFFIC_WINDOW
           value: "30s"
         - name: EDGE_LOW_THRESHOLD
@@ -578,7 +606,7 @@ spec:
         - name: EDGE_MED_THRESHOLD
           value: "1400"
         - name: NODE1_PEERS
-          value: "node2"
+          value: "node2,nginx"
         - name: NODE2_PEERS
           value: "node1,node10,node5,node4"
         - name: NODE3_PEERS
@@ -597,5 +625,7 @@ spec:
           value: "node5,node7,node10"
         - name: NODE10_PEERS
           value: "node2,node9"
+        - name: NGINX_PEERS
+          value: "node1"
         ports:
         - containerPort: 9101
