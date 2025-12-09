@@ -164,7 +164,7 @@ data:
           "id": 1,
           "options": {
             "edges": {},
-            "layoutAlgorithm": "force",
+            "layoutAlgorithm": "layered",
             "nodes": {
               "arcs": [],
               "mainStatUnit": "",
@@ -220,7 +220,8 @@ data:
                     "title",
                     "source",
                     "target",
-                    "secondarystat"
+                    "secondarystat",
+                    "icon"
                   ]
                 }
               }
@@ -349,5 +350,5 @@ data:
       "timezone": "browser",
       "title": "NodeGraph",
       "uid": "adcf9f9",
-      "version": 11
+      "version": 12
     }
