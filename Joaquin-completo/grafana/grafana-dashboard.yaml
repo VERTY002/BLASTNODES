@@ -156,8 +156,8 @@ data:
             "overrides": []
           },
           "gridPos": {
-            "h": 10,
-            "w": 24,
+            "h": 15,
+            "w": 16,
             "x": 0,
             "y": 8
           },
@@ -302,10 +302,10 @@ data:
             "overrides": []
           },
           "gridPos": {
-            "h": 8,
-            "w": 24,
-            "x": 0,
-            "y": 18
+            "h": 15,
+            "w": 8,
+            "x": 16,
+            "y": 8
           },
           "id": 5,
           "options": {
@@ -350,5 +350,5 @@ data:
       "timezone": "browser",
       "title": "NodeGraph",
       "uid": "adcf9f9",
-      "version": 12
+      "version": 15
     }
