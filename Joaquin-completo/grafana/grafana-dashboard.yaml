@@ -4,6 +4,7 @@ metadata:
   name: nodegraph-dashboard
   namespace: monitoring
   labels:
+    # Esta etiqueta DEBE coincidir con la del sidecar en el paso 1
     grafana_dashboard: "1"
 data:
   nodegraph.json: |-
@@ -73,7 +74,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -149,7 +150,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {},
@@ -177,7 +178,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "builder",
               "exemplar": false,
@@ -192,7 +193,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "builder",
               "exemplar": false,
@@ -243,7 +244,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -350,5 +351,5 @@ data:
       "timezone": "browser",
       "title": "NodeGraph",
       "uid": "adcf9f9",
-      "version": 15
+      "version": 18
     }
