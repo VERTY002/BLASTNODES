@@ -156,8 +156,8 @@ data:
             "overrides": []
           },
           "gridPos": {
-            "h": 15,
-            "w": 16,
+            "h": 10,
+            "w": 24,
             "x": 0,
             "y": 8
           },
@@ -165,7 +165,11 @@ data:
           "options": {
             "edges": {},
             "layoutAlgorithm": "force",
-            "nodes": {},
+            "nodes": {
+              "arcs": [],
+              "mainStatUnit": "",
+              "secondaryStatUnit": ""
+            },
             "zoomMode": "cooperative"
           },
           "pluginVersion": "12.3.0",
@@ -179,6 +183,7 @@ data:
               "exemplar": false,
               "expr": "sort(nodegraph_node_info)",
               "format": "table",
+              "hide": false,
               "instant": true,
               "legendFormat": "__auto",
               "range": false,
@@ -200,27 +205,133 @@ data:
               "refId": "Edges"
             }
           ],
-          "title": "NodeGraph",
+          "title": "Blast radius",
           "transformations": [
             {
               "id": "filterFieldsByName",
               "options": {
+                "byVariable": false,
                 "include": {
                   "names": [
                     "color",
-                    "edge_color",
                     "id",
                     "mainstat",
                     "subtitle",
                     "title",
                     "source",
-                    "target"
+                    "target",
+                    "secondarystat"
                   ]
                 }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "fields": {},
+                "sort": [
+                  {
+                    "field": "id"
+                  }
+                ]
               }
             }
           ],
           "type": "nodeGraph"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "showValues": false,
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": 0
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 18
+          },
+          "id": 5,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "12.3.0",
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.9, rate(prober_probe_duration_seconds_bucket{namespace=\"nodes\"}[1m]))",
+              "legendFormat": "{{container}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Delay",
+          "type": "timeseries"
         }
       ],
       "preload": false,
@@ -238,5 +349,5 @@ data:
       "timezone": "browser",
       "title": "NodeGraph",
       "uid": "adcf9f9",
-      "version": 4
+      "version": 11
     }
