@@ -3,7 +3,7 @@
 (es pq al obrir el grafana no hagis d'iniciar sessio)
 
   helm upgrade monitoring prometheus-community/kube-prometheus-stack \ \
-  --namespace monitoring \
+  --namespace monitoring \\
   --values grafana-values.yaml
 
   kubectl apply -f grafana-dashboard.yaml
