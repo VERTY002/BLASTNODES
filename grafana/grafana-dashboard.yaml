@@ -4,6 +4,7 @@ metadata:
   name: nodegraph-dashboard
   namespace: monitoring
   labels:
+    # Esta etiqueta DEBE coincidir con la del sidecar en el paso 1
     grafana_dashboard: "1"
 data:
   nodegraph.json: |-
@@ -73,7 +74,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -149,15 +150,15 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {},
             "overrides": []
           },
           "gridPos": {
-            "h": 10,
-            "w": 24,
+            "h": 15,
+            "w": 16,
             "x": 0,
             "y": 8
           },
@@ -177,7 +178,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "builder",
               "exemplar": false,
@@ -192,7 +193,7 @@ data:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "builder",
               "exemplar": false,
@@ -243,7 +244,7 @@ data:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -302,10 +303,10 @@ data:
             "overrides": []
           },
           "gridPos": {
-            "h": 8,
-            "w": 24,
-            "x": 0,
-            "y": 18
+            "h": 15,
+            "w": 8,
+            "x": 16,
+            "y": 8
           },
           "id": 5,
           "options": {
@@ -350,5 +351,5 @@ data:
       "timezone": "browser",
       "title": "NodeGraph",
       "uid": "adcf9f9",
-      "version": 12
+      "version": 18
     }
