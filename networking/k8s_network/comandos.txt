@@ -1,5 +1,0 @@
-minikube start --driver=docker 
-kubectl apply -f deployments.yaml
-kubectl apply -f services
-kubectls get pods
-kubectl logs -l app -n blast --prefix=true -f --max-log-requests=10
