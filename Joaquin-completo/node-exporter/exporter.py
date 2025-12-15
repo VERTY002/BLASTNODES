@@ -111,9 +111,7 @@ def metrics():
             f'mainstat="{status}",color="{color}"}} 1'
         )
 
-    # ================================
-    # 🎯 EDGES BIDIRECCIONALES
-    # ================================
+   
     seen = set()
 
     for src in NODES:
